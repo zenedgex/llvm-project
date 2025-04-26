@@ -15,6 +15,7 @@
 
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
@@ -141,6 +142,128 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
 
+  let hasVerifier = 1;
+}
+//===----------------------------------------------------------------------===//
+// LoopOp
+//===----------------------------------------------------------------------===//
+
+def LoopOp : SCF_Op<"loop",[
+    AutomaticAllocationScope,
+    OpAsmOpInterface,
+    RecursiveMemoryEffects,
+    PropagateControlFlowBreak,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+    SingleBlockImplicitTerminator<"op_impl::LoopOpImplicitTerminatorType">,
+    HasBreakingControlFlowOpInterface,
+    HasNestedTerminator<["ContinueOp", "BreakOp"]>
+  ]> {
+  let summary = "Loop until a break operation";
+  let description = [{
+    The `loop` operation represents an, unstructured, infinite loop that executes
+    until a `break` is reached.
+
+    The loop consists of a (1) a set of loop-carried values which are initialized by
+    `initValues` and updated by each iteration of the loop, and
+    (2) a region which represents the loop body.
+
+    The loop will execute the body of the loop until a `break` is dynamically executed.
+
+    Each control path of the loop must be terminated by:
+
+    - a `continue` that yields the next iteration's value for each loop carried variable.
+    - a `break` that terminates the loop and yields the final loop carried values.
+
+    As long as each loop iteration is terminated by one of these operations they may be combined with other control
+    flow operations to express different control flow patterns.
+
+    The loop operation produces one return value for each loop carried variable. The type of the `i`-th return
+    value is that of the `i`-th loop carried variable and its value is the final value of the
+    `i`-th loop carried variable.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$initValues);
+  let results = (outs Variadic<AnyType>:$resultValues);
+  let regions = (region SizedRegion<1>:$region);
+
+  let extraClassDeclaration = [{
+    static bool acceptsTerminator(Operation *predecessor) {
+      return isa<BreakOp, ContinueOp>(predecessor);
+    }
+
+    /// Return the iteration values of the loop region.
+    Block::BlockArgListType getRegionIterValues() {
+      return getRegion().getArguments();
+    }
+
+    /// Return the `index`-th region iteration value.
+    BlockArgument getRegionIterValue(unsigned index) {
+      return getRegionIterValues()[index];
+    }
+
+    /// Returns the number of region arguments for loop-carried values.
+    unsigned getNumRegionIterValues() { return getRegion().getNumArguments(); }
+
+    /// Returns the loop block body
+    Block *getBody() { return &getRegion().front(); }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasRegionVerifier = 1;
+  let hasCanonicalizer = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+def BreakOp : SCF_Op<"break", [
+    ReturnLike, Terminator, RegionTerminator, RegionBranchTerminatorOpInterface, ParentOneOf<["IfOp", "LoopOp"]>
+  ]> {
+  let summary = "Break from loop";
+  let description = [{
+    The `break` operation is a terminator operation of a `scf.loop`.
+
+    It may yield any number of operands to the parent loop upon termination.
+    The number of values yielded
+    and the execution semantics of how they are yielded are determined by the
+    parent loop.
+  }];
+
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
+  let assemblyFormat = [{
+    num-breaking-regions attr-dict ($operands^ `:` type($operands))?
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+def ContinueOp : SCF_Op<"continue", [
+    Terminator, RegionTerminator, DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, ParentOneOf<["IfOp", "LoopOp"]>
+  ]> {
+  let summary = "Continue to next loop iteration";
+  let description = [{
+    The continue operation represents a block terminator that returns control to
+    a `scf.loop` operation. The operation may yield any number of operands to the parent
+    loop upon termination.
+
+    The requirements and semantics of the continue operation are defined by the parent loop
+    operation, see the loop operation's description for particular semantics.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+  let builders = [OpBuilder<(ins), [{
+    $_state.setNumBreakingControlRegions(1);
+    }]>];
+  let assemblyFormat = [{
+    num-breaking-regions ($operands^ `:` type($operands))? attr-dict
+  }];
   let hasVerifier = 1;
 }
 
@@ -705,8 +828,8 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
 def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
     "getEntrySuccessorRegions"]>,
-    InferTypeOpAdaptor, SingleBlockImplicitTerminator<"scf::YieldOp">,
-    RecursiveMemoryEffects, RecursivelySpeculatable, NoRegionArguments]> {
+    InferTypeOpAdaptor, SingleBlockImplicitTerminator<"op_impl::IfOpImplicitTerminatorType">,
+    RecursiveMemoryEffects, RecursivelySpeculatable, NoRegionArguments, PropagateControlFlowBreak]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for
@@ -789,9 +912,19 @@ def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
                                   : OpBuilder::atBlockEnd(body, listener);
     }
     Block* thenBlock();
+    [[deprecated("Use thenTerminator() instead")]]
     YieldOp thenYield();
+    // Returns either scf.break, scf.continue, or scf.yield.
+    Operation *thenTerminator() {
+      return thenBlock()->getTerminator();
+    }
     Block* elseBlock();
+    [[deprecated("Use elseTerminator() instead")]]
     YieldOp elseYield();
+    // Returns either scf.break, scf.continue, or scf.yield.
+    Operation *elseTerminator() {
+      return elseBlock()->getTerminator();
+    }
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
@@ -907,7 +1040,7 @@ def ParallelOp : SCF_Op<"parallel",
 //===----------------------------------------------------------------------===//
 
 def ReduceOp : SCF_Op<"reduce", [
-    Terminator, HasParent<"ParallelOp">, RecursiveMemoryEffects,
+    Terminator, ImmediateRegionTerminator, HasParent<"ParallelOp">, RecursiveMemoryEffects,
     DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>]> {
   let summary = "reduce operation for scf.parallel";
   let description = [{
