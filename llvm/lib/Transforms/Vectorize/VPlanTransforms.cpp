@@ -3995,13 +3995,15 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
     R->eraseFromParent();
 }
 
-void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
-                                                 VPBasicBlock *EarlyExitVPBB,
-                                                 VPlan &Plan,
-                                                 VPBasicBlock *HeaderVPBB,
-                                                 VPBasicBlock *LatchVPBB) {
+void VPlanTransforms::handleUncountableEarlyExit(
+    VPBasicBlock *EarlyExitingVPBB, VPBasicBlock *EarlyExitVPBB, VPlan &Plan,
+    VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB,
+    EarlyExitStyleTy::Option Style) {
   auto *MiddleVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[0]);
-  if (!EarlyExitVPBB->getSinglePredecessor() &&
+  // Phis do not need to be adjusted if we're dealing with any uncountable exits
+  // in the scalar loop.
+  if (Style == EarlyExitStyleTy::ReadOnlyUncountableExitsInVectorLoop &&
+      !EarlyExitVPBB->getSinglePredecessor() &&
       EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB) {
     assert(EarlyExitVPBB->getNumPredecessors() == 2 &&
            EarlyExitVPBB->getPredecessors()[0] == EarlyExitingVPBB &&
@@ -4027,6 +4029,29 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   // [0] vector.early.exit, [1] middle block, [2] header (continue looping).
   VPValue *IsEarlyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {CondToEarlyExit});
+
+  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
+  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
+         "Unexpected terminator");
+  auto *IsLatchExitTaken =
+      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
+                         LatchExitingBranch->getOperand(1));
+  DebugLoc LatchDL = LatchExitingBranch->getDebugLoc();
+  LatchExitingBranch->eraseFromParent();
+
+  // If the early-exit loop has side effects (e.g. stores), then we may want to
+  // handle any uncountable exits in the scalar loop. In order for that to work,
+  // if an uncountable exit is taken we must always enter the scalar loop to
+  // perform the last iteration where the exit occurs. So we can bail out here
+  // after combining the exit conditions into one instead of creating multiple
+  // exit blocks and branches.
+  if (Style == EarlyExitStyleTy::MaskedHandleLastIterationInScalarLoop) {
+    Builder.setInsertPoint(LatchVPBB);
+    VPInstruction *Combined =
+        Builder.createOr(IsEarlyExitTaken, IsLatchExitTaken, LatchDL);
+    Builder.createNaryOp(VPInstruction::BranchOnCond, {Combined});
+    return;
+  }
   VPBasicBlock *VectorEarlyExitVPBB =
       Plan.createVPBasicBlock("vector.early.exit");
   VectorEarlyExitVPBB->setParent(EarlyExitVPBB->getParent());
@@ -4064,15 +4089,6 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   // loop with a multi-conditional branch exiting to vector early exit if the
   // early exit has been taken, exiting to middle block if the original
   // condition of the vector latch is true, otherwise continuing back to header.
-  auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
-  assert(LatchExitingBranch->getOpcode() == VPInstruction::BranchOnCount &&
-         "Unexpected terminator");
-  auto *IsLatchExitTaken =
-      Builder.createICmp(CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
-                         LatchExitingBranch->getOperand(1));
-
-  DebugLoc LatchDL = LatchExitingBranch->getDebugLoc();
-  LatchExitingBranch->eraseFromParent();
 
   Builder.setInsertPoint(LatchVPBB);
   Builder.createNaryOp(VPInstruction::BranchOnTwoConds,
@@ -4080,6 +4096,161 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   LatchVPBB->clearSuccessors();
   LatchVPBB->setSuccessors({VectorEarlyExitVPBB, MiddleVPBB, HeaderVPBB});
   VectorEarlyExitVPBB->setPredecessors({LatchVPBB});
+}
+
+bool VPlanTransforms::handleUncountableExitsWithSideEffects(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return false;
+
+  // We can abandon a vplan entirely if we return false here, so we shouldn't
+  // crash if some earlier assumptions on scalar IR don't hold for the vplan
+  // version of the loop.
+  VPCanonicalIVPHIRecipe *IV = Plan.getVectorLoopRegion()->getCanonicalIV();
+  VPInstruction *IVUpdate = dyn_cast<VPInstruction>(IV->getBackedgeValue());
+  if (!IVUpdate)
+    return false;
+
+  SmallVector<VPRecipeBase *, 2> GEPs;
+  SmallVector<VPRecipeBase *, 8> ConditionRecipes;
+
+  std::optional<VPValue *> Cond =
+      vputils::getRecipesForUncountableExit(Plan, ConditionRecipes, GEPs);
+  if (!Cond)
+    return false;
+
+  // Find load contributing to condition.
+  VPRecipeBase *CondLoad = nullptr;
+  for (auto *Recipe : ConditionRecipes) {
+    if (match(Recipe, m_UnmaskedLoad(m_VPValue()))) {
+      // TODO: Support more than one load. Needs legality updates too.
+      assert(CondLoad == nullptr && "Too many condition loads\n");
+      CondLoad = Recipe;
+    }
+  }
+  assert(CondLoad && "Couldn't find load\n");
+
+  // Check GEPs to see if we can link them to a widen IV recipe with a step of
+  // 1; we're only interested in contiguous accesses for the condition load
+  // right now.
+  // TODO: Can we link this with the canonical IV this early? We're still
+  //       mostly looking at a copy of the scalar IR.
+  using namespace llvm::VPlanPatternMatch;
+
+  VPValue *MaybeIV = nullptr;
+  for (auto *GEP : GEPs) {
+    if (!match(GEP, m_GetElementPtr(m_LiveIn(), m_VPValue(MaybeIV))))
+      return false;
+
+    auto *WIV = dyn_cast<VPWidenInductionRecipe>(MaybeIV);
+    if (!WIV)
+      return false;
+
+    auto *ConstStep = dyn_cast<VPConstantInt>(WIV->getStepValue());
+    if (!ConstStep || !ConstStep->isOne())
+      return false;
+  }
+
+  // Do we need to move? Find the first memory operation that isn't the
+  // load for the early exit condition comparison.
+  // TODO: Maybe do the move unconditionally, just to avoid problems?
+  VPRecipeBase *FirstMemOp = nullptr;
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+
+  // Find an insertion point. Default to the end of the header (we haven't
+  // performed if-conversion yet, so there will likely be more than one block),
+  // but override if we find a memory op that needs masking before the
+  // condition load.
+  auto InsertIt = Header->getRecipeList().end();
+  for (VPRecipeBase &R : make_early_inc_range(*Header)) {
+    if (&R == CondLoad)
+      continue;
+
+    if (match(&R, m_CombineOr(m_UnmaskedLoad(m_VPValue()),
+                              m_UnmaskedStore(m_VPValue(), m_VPValue())))) {
+      FirstMemOp = &R;
+      break;
+    }
+  }
+
+  // If another memory operation would take place before the comparison to
+  // determine whether to exit early, move the comparison (and supporting
+  // recipes) before it.)
+  // TODO: Can we have a situation where the condition load isn't in the
+  //       header, but another memory op occurs before it? We are excluding
+  //       conditional execution of any memory ops, but maybe there are other
+  //       operations requiring conditional operation that might break things.
+  if (FirstMemOp) {
+    InsertIt = FirstMemOp->getIterator();
+    VPRecipeBase *CondR = (*Cond)->getDefiningRecipe();
+    VPDominatorTree VPDT(Plan);
+    if (!VPDT.properlyDominates(CondR, FirstMemOp)) {
+      for (auto *Recipe : reverse(ConditionRecipes))
+        Recipe->moveBefore(*Header, InsertIt);
+
+      CondR->moveBefore(*Header, InsertIt);
+    }
+  }
+
+  // Create a mask to represent all lanes that fully execute in the vector loop,
+  // stopping short of any early exit.
+  VPBuilder MaskBuilder(Header, InsertIt);
+  VPValue *FirstActive =
+      MaskBuilder.createNaryOp(VPInstruction::FirstActiveLane, *Cond);
+  VPValue *ALMMultiplier =
+      Plan.getConstantInt(Plan.getVectorLoopRegion()->getCanonicalIVType(), 1);
+  VPValue *Zero =
+      Plan.getConstantInt(Plan.getVectorLoopRegion()->getCanonicalIVType(), 0);
+  VPValue *Mask = MaskBuilder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                           {Zero, FirstActive, ALMMultiplier},
+                                           nullptr, "uncountable.exit.mask");
+
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Header);
+  // Convert all other memory operations to use the mask.
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (&R == CondLoad)
+        continue;
+
+      if (match(&R, m_CombineOr(m_UnmaskedLoad(m_VPValue()),
+                                m_UnmaskedStore(m_VPValue(), m_VPValue()))))
+        cast<VPInstruction>(&R)->addMask(Mask);
+    }
+  }
+
+  // Update middle block branch to compare (IV + however many lanes were active)
+  // against the full trip count, since we may be exiting the vector loop early.
+  // If we didn't take an early exit, we should get the equivalent of VF from
+  // the cttz.elts.
+  VPBasicBlock *MiddleBlock = Plan.getMiddleBlock();
+  VPRecipeBase *OldTerminator = MiddleBlock->getTerminator();
+  VPBuilder MiddleBuilder(OldTerminator);
+  // TODO: Create popcount of mask another way... zext + reduce_add?
+  //       For SVE at least we want to be able to fold away the
+  //       brkb+cntp+whilelo in the loop to just brkb. We need a cntp
+  //       outside the loop instead... maybe copy in CodeGenPrepare?
+  VPTypeAnalysis TypeInfo(Plan);
+  VPValue *ExitIV = MiddleBuilder.createAdd(IV, FirstActive);
+  VPValue *FullTC =
+      MiddleBuilder.createICmp(CmpInst::ICMP_EQ, ExitIV, Plan.getTripCount());
+  OldTerminator->setOperand(0, FullTC);
+
+  // Update resume phi in scalar.ph...
+  VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
+  auto Phis = ScalarPH->phis();
+  bool PhiFound = false;
+  for (auto &Phi : Phis) {
+    // TODO: Handle more than one Phi; re-derive from IV.
+    // TODO: Handle reductions, one day...
+    if (PhiFound)
+      return false;
+    PhiFound = true;
+    VPPhi *ContinueIV = cast<VPPhi>(&Phi);
+    ContinueIV->setOperand(0, ExitIV);
+  }
+
+  return true;
 }
 
 /// This function tries convert extended in-loop reductions to

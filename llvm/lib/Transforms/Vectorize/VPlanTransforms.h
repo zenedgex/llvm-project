@@ -139,8 +139,9 @@ struct VPlanTransforms {
       ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
-                                                 bool HasUncountableExit);
+  LLVM_ABI_FOR_TEST static void
+  handleEarlyExits(VPlan &Plan, bool HasUncountableExit,
+                   bool HasUncountableExitWithSideEffects);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -311,11 +312,17 @@ struct VPlanTransforms {
   /// Update \p Plan to account for the uncountable early exit from \p
   /// EarlyExitingVPBB to \p EarlyExitVPBB by introducing a BranchOnTwoConds
   /// terminator in the latch that handles the early exit and the latch exit
-  /// condition.
+  /// condition, or a BranchOnCond terminator with a combined condition based
+  /// on the style of early exit vectorization.
   static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
                                          VPBasicBlock *EarlyExitVPBB,
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                         VPBasicBlock *LatchVPBB);
+                                         VPBasicBlock *LatchVPBB,
+                                         EarlyExitStyleTy::Option Style);
+
+  /// Update \p Plan to mask memory operations in the loop based on whether
+  /// the early exit is taken or not.
+  static bool handleUncountableExitsWithSideEffects(VPlan &Plan);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

@@ -1952,7 +1952,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
       if (&I == Load)
         continue;
 
-      if (I.mayWriteToMemory()) {
+      // We need to mask all other memory ops.
+      if (I.mayReadOrWriteMemory()) {
+        MaskedOp.insert(&I);
+        if (isa<LoadInst>(&I))
+          continue;
         if (auto *SI = dyn_cast<StoreInst>(&I)) {
           AliasResult AR = AA->alias(Ptr, SI->getPointerOperand());
           if (AR == AliasResult::NoAlias)
@@ -2059,12 +2063,24 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // Bail out for state-changing loops with uncountable exits for now.
-  if (UncountableExitWithSideEffects) {
-    reportVectorizationFailure(
-        "Writes to memory unsupported in early exit loops",
-        "Cannot vectorize early exit loop with writes to memory",
-        "WritesInEarlyExitLoop", ORE, TheLoop);
+  // TODO: Remove this restriction once we're sure it's safe to do so.
+  //       Handling stores to invariant addresses will be slightly different
+  //       based on the approach taken. If we bail out before executing any
+  //       lane that would take the uncountable exit, then the store that occurs
+  //       in the scalar loop would suffice.
+  //
+  //       If we instead handle the lane taking the uncountable exit within the
+  //       vectorized loop, then we will have to ensure that we extract the
+  //       last active lane at that point in the loop instead of the last lane
+  //       of the vector before performing a scalar store.
+  if (hasUncountableExitWithSideEffects() &&
+      !LAI->getStoresToInvariantAddresses().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot vectorize early exit loops with stores to "
+                         "loop-invariant addresses\n");
+    reportVectorizationFailure("Cannot vectorize EE loop with LI stores",
+                               "Cannot vectorize early exit loops with stores "
+                               "to loop-invariant addresses",
+                               ORE, TheLoop);
     return false;
   }
 

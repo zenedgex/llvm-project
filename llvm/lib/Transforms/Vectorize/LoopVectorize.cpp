@@ -409,6 +409,12 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> EnableEarlyExitWithSideEffectVectorization(
+    "enable-early-exit-with-side-effect-vectorization", cl::init(false),
+    cl::Hidden,
+    cl::desc("Enable vectorization of early exit loops with uncountable exits "
+             "and side effects"));
+
 static cl::opt<bool> ConsiderRegPressure(
     "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
     cl::desc("Discard VFs if their register pressure is too high."));
@@ -7322,6 +7328,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
              });
   assert(
       (BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+       Legal->hasUncountableExitWithSideEffects() ||
        !Legal->getLAI()->getSymbolicStrides().empty() || UsesEVLGatherScatter ||
        planContainsAdditionalSimplifications(
            getPlanFor(BestFactor.Width), CostCtx, OrigLoop, BestFactor.Width) ||
@@ -8151,6 +8158,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                        CM.getMaxSafeElements());
         RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
       }
+
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
@@ -8175,7 +8183,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
+  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit(),
+                                    Legal->hasUncountableExitWithSideEffects());
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
@@ -8235,6 +8244,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
   VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
+
+  // ---------------------------------------------------------------------------
+  // If there's an uncountable exit with side effects, generate the masks
+  // needed for memory operations beyond the condition load.
+  // ---------------------------------------------------------------------------
+  if (Legal->hasUncountableExitWithSideEffects())
+    if (!VPlanTransforms::handleUncountableExitsWithSideEffects(*Plan))
+      return nullptr;
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
@@ -8328,7 +8345,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // failures.
   VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
+  // TODO: Currently we only allow a single PHI for these loops, and it
+  // has already been handled at this point. But we'll need to handle more PHIs,
+  // and do a better job with them.
+  if (!Legal->hasUncountableExitWithSideEffects())
+    VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8426,8 +8447,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       MapVector<PHINode *, RecurrenceDescriptor>(),
       SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
       /*AllowReordering=*/false);
-  VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false);
+  VPlanTransforms::handleEarlyExits(
+      *Plan,
+      /*HasUncountableExit*/ false,
+      /*HasUncountableExitWithSideEffects=*/false);
   VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
                                   /*TailFolded*/ false);
 
@@ -9505,6 +9528,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  "UncountableEarlyExitLoopsDisabled", ORE, L);
       return false;
     }
+    if (LVL.hasUncountableExitWithSideEffects() &&
+        !EnableEarlyExitWithSideEffectVectorization) {
+      reportVectorizationFailure("Auto-vectorization of loops with uncountable "
+                                 "early exit and side effects is not enabled",
+                                 "UncountableEarlyExitSideEffectLoopsDisabled",
+                                 ORE, L);
+      return false;
+    }
     SmallVector<BasicBlock *, 8> ExitingBlocks;
     L->getExitingBlocks(ExitingBlocks);
     // TODO: Support multiple uncountable early exits.
@@ -9768,6 +9799,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LLVM_DEBUG(dbgs() << "LV: Not interleaving due to FindLast reduction.\n");
     IntDiagMsg = {"FindLastPreventsScalarInterleaving",
                   "Unable to interleave due to FindLast reduction."};
+    InterleaveLoop = false;
+    IC = 1;
+  }
+
+  // FIXME: Enable interleaving for EE-with-side-effects.
+  if (InterleaveLoop && LVL.hasUncountableExitWithSideEffects()) {
+    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
+    IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
+                  "Unable to interleave due to early exit with side effects."};
     InterleaveLoop = false;
     IC = 1;
   }
