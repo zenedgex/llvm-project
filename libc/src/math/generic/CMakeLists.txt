@@ -1544,8 +1544,6 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
     libc.src.__support.math.expxf16_utils
-  COMPILE_OPTIONS
-    -O3
 )
 
 add_entrypoint_object(
