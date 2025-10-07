@@ -3873,7 +3873,8 @@ MCSymbol *BinaryFunction::getSymbolForEntryID(uint64_t EntryID) {
   return nullptr;
 }
 
-uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
+std::optional<uint64_t>
+BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
   if (!isMultiEntry())
     return 0;
 
@@ -3900,8 +3901,7 @@ uint64_t BinaryFunction::getEntryIDForSymbol(const MCSymbol *Symbol) const {
       return NumEntries;
     ++NumEntries;
   }
-
-  llvm_unreachable("symbol not found");
+  return std::nullopt;
 }
 
 bool BinaryFunction::forEachEntryPoint(EntryPointCallbackTy Callback) const {
