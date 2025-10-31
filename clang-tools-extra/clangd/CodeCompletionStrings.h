@@ -53,6 +53,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet,
                   CodeCompletionResult::ResultKind ResultKind,
                   CXCursorKind CursorKind, bool IncludeFunctionArguments = true,
+                  bool IsDefinition = false,
                   std::string *RequiredQualifiers = nullptr);
 
 /// Assembles formatted documentation for a completion result. This includes

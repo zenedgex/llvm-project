@@ -355,7 +355,14 @@ public:
   /// are invalid.
   bool
   TryAnnotateTypeOrScopeToken(ImplicitTypenameContext AllowImplicitTypename =
-                                  ImplicitTypenameContext::No);
+                                  ImplicitTypenameContext::No,
+                              bool isAddressOfOperand = false);
+
+  bool TryAnnotateTypeOrScopeToken(bool isAddressOfOperand) {
+    return TryAnnotateTypeOrScopeToken(
+        /*AllowImplicitTypename=*/ImplicitTypenameContext::No,
+        /*isAddressOfOperand=*/isAddressOfOperand);
+  }
 
   /// Try to annotate a type or scope token, having already parsed an
   /// optional scope specifier. \p IsNewScope should be \c true unless the scope
@@ -4566,7 +4573,22 @@ private:
       bool EnteringContext, bool *MayBePseudoDestructor = nullptr,
       bool IsTypename = false, const IdentifierInfo **LastII = nullptr,
       bool OnlyNamespace = false, bool InUsingDeclaration = false,
-      bool Disambiguation = false);
+      bool Disambiguation = false, bool isAddressOfOperand = false);
+
+  bool ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS, ParsedType ObjectType,
+                                      bool ObjectHasErrors,
+                                      bool EnteringContext,
+                                      bool isAddressOfOperand) {
+    return ParseOptionalCXXScopeSpecifier(
+        SS, ObjectType, ObjectHasErrors, EnteringContext,
+        /*MayBePseudoDestructor=*/nullptr,
+        /*IsTypename=*/false,
+        /*LastII=*/nullptr,
+        /*OnlyNamespace=*/false,
+        /*InUsingDeclaration=*/false,
+        /*Disambiguation=*/false,
+        /*isAddressOfOperand=*/isAddressOfOperand);
+  }
 
   //===--------------------------------------------------------------------===//
   // C++11 5.1.2: Lambda expressions

@@ -531,18 +531,22 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
 
   Annotations Code(R"cpp(
       struct Foo {
-        static int staticMethod(int);
-        int method(int) const;
+        static int staticMethod(int name);
+        int method(int name) const;
         template <typename T, typename U, typename V = int>
-        T generic(U, V);
+        T generic(U nameU, V nameV);
         template <typename T, int U>
         static T staticGeneric();
         Foo() {
-          this->$canBeCall^
+          this->$canBeCallNoStatic^
           $canBeCall^
           Foo::$canBeCall^
         }
       };
+
+      int Foo::$isDefinition^ {
+      }
+      ;
 
       struct Derived : Foo {
         using Foo::method;
@@ -553,12 +557,13 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
       };
 
       struct OtherClass {
-        OtherClass() {
+        OthrClass() {
           Foo f;
           Derived d;
-          f.$canBeCall^
+          f.$canBeCallNoStatic^
           ; // Prevent parsing as 'f.f'
           f.Foo::$canBeCall^
+          ; // Prevent parsing as 'f.f'
           &Foo::$canNotBeCall^
           ;
           d.Foo::$canBeCall^
@@ -573,6 +578,7 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
         f.$canBeCall^
         ; // Prevent parsing as 'f.f'
         f.Foo::$canBeCall^
+        ; // Prevent parsing as 'f.f'
         &Foo::$canNotBeCall^
         ;
         d.Foo::$canBeCall^
@@ -585,39 +591,94 @@ TEST(CompletionTest, HeuristicsForMemberFunctionCompletion) {
   for (const auto &P : Code.points("canNotBeCall")) {
     auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("method"), signature("(int) const"),
+                Contains(AllOf(named("method"), signature("(int name) const"),
                                snippetSuffix(""))));
-    // We don't have any arguments to deduce against if this isn't a call.
-    // Thus, we should emit these deducible template arguments explicitly.
     EXPECT_THAT(
         Results.Completions,
         Contains(AllOf(named("generic"),
-                       signature("<typename T, typename U>(U, V)"),
-                       snippetSuffix("<${1:typename T}, ${2:typename U}>"))));
+                       signature("<typename T, typename U>(U nameU, V nameV)"),
+                       snippetSuffix(""))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix(""))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(named("staticGeneric"),
+                       signature("<typename T, int U>()"), snippetSuffix(""))));
   }
 
   for (const auto &P : Code.points("canBeCall")) {
     auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("method"), signature("(int) const"),
-                               snippetSuffix("(${1:int})"))));
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(${1:int name})"))));
     EXPECT_THAT(
         Results.Completions,
-        Contains(AllOf(named("generic"), signature("<typename T>(U, V)"),
-                       snippetSuffix("<${1:typename T}>(${2:U}, ${3:V})"))));
-  }
-
-  // static method will always keep the snippet
-  for (const auto &P : Code.points()) {
-    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+        Contains(AllOf(
+            named("generic"), signature("<typename T>(U nameU, V nameV)"),
+            snippetSuffix("<${1:typename T}>(${2:U nameU}, ${3:V nameV})"))));
     EXPECT_THAT(Results.Completions,
-                Contains(AllOf(named("staticMethod"), signature("(int)"),
-                               snippetSuffix("(${1:int})"))));
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix("(${1:int name})"))));
     EXPECT_THAT(Results.Completions,
                 Contains(AllOf(
                     named("staticGeneric"), signature("<typename T, int U>()"),
                     snippetSuffix("<${1:typename T}, ${2:int U}>()"))));
   }
+
+  for (const auto &P : Code.points("canBeCallNoStatic")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(${1:int name})"))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(
+            named("generic"), signature("<typename T>(U nameU, V nameV)"),
+            snippetSuffix("<${1:typename T}>(${2:U nameU}, ${3:V nameV})"))));
+  }
+
+  for (const auto &P : Code.points("isDefinition")) {
+    auto Results = completions(TU, P, /*IndexSymbols*/ {}, Opts);
+
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("method"), signature("(int name) const"),
+                               snippetSuffix("(int name) const"))));
+    EXPECT_THAT(
+        Results.Completions,
+        Contains(AllOf(
+            named("generic"),
+            signature("<typename T, typename U>(U nameU, V nameV)"),
+            snippetSuffix("<typename T, typename U>(U nameU, V nameV)"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticMethod"), signature("(int name)"),
+                               snippetSuffix("(int name)"))));
+    EXPECT_THAT(Results.Completions,
+                Contains(AllOf(named("staticGeneric"),
+                               signature("<typename T, int U>()"),
+                               snippetSuffix("<typename T, int U>()"))));
+  }
+}
+
+TEST(CompletionTest, DefaultArgsWithValues) {
+  clangd::CodeCompleteOptions Opts;
+  Opts.EnableSnippets = true;
+  auto Results = completions(
+      R"cpp(
+    struct Arg {
+        Arg(int a, int b);
+    };
+    struct Foo {
+      void foo(int x = 42, int y = 0, Arg arg = Arg(42,  0));
+    };
+    void Foo::foo^
+  )cpp",
+      /*IndexSymbols=*/{}, Opts);
+  EXPECT_THAT(Results.Completions,
+              Contains(AllOf(
+                  named("foo"),
+                  signature("(int x = 42, int y = 0, Arg arg = Arg(42,  0))"),
+                  snippetSuffix("(int x, int y, Arg arg)"))));
 }
 
 TEST(CompletionTest, NoSnippetsInUsings) {
@@ -4490,7 +4551,7 @@ TEST(CompletionTest, SkipExplicitObjectParameter) {
     EXPECT_THAT(
         Result.Completions,
         ElementsAre(AllOf(named("foo"), signature("<class self:auto>(int arg)"),
-                          snippetSuffix("<${1:class self:auto}>"))));
+                          snippetSuffix(""))));
   }
   {
     auto Result = codeComplete(testPath(TU.Filename), Code.point("c3"),
