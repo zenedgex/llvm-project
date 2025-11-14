@@ -1711,12 +1711,14 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
   }
 }
 
-void NamedDecl::printNestedNameSpecifier(raw_ostream &OS) const {
+void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
+                                         bool AllowFunctionContext) const {
   printNestedNameSpecifier(OS, getASTContext().getPrintingPolicy());
 }
 
 void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
-                                         const PrintingPolicy &P) const {
+                                         const PrintingPolicy &P,
+                                         bool AllowFunctionContext) const {
   const DeclContext *Ctx = getDeclContext();
 
   // For ObjC methods and properties, look through categories and use the
@@ -1733,7 +1735,7 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       Ctx = CI;
   }
 
-  if (Ctx->isFunctionOrMethod())
+  if (Ctx->isFunctionOrMethod() && !AllowFunctionContext)
     return;
 
   using ContextsTy = SmallVector<const DeclContext *, 8>;
@@ -4991,10 +4993,13 @@ void TagDecl::printAnonymousTagDecl(llvm::raw_ostream &OS,
     OS << "unnamed";
   }
 
+  if (Policy.CanonicalAnonymousEntities)
+    OS << getASTContext().getManglingNumber(this);
+
   if (!SuppressTagKeywordInName)
     OS << ' ' << getKindName();
 
-  if (Policy.AnonymousTagLocations) {
+  if (Policy.AnonymousTagLocations && !Policy.CanonicalAnonymousEntities) {
     PresumedLoc PLoc =
         getASTContext().getSourceManager().getPresumedLoc(getLocation());
     if (PLoc.isValid()) {
