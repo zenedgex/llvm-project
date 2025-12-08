@@ -601,6 +601,20 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
   return NumDWords <= MaxMemoryClusterDWords;
 }
 
+bool SIInstrInfo::canReorderClusterMemOps(
+    ArrayRef<const MachineOperand *> BaseOps1,
+    ArrayRef<const MachineOperand *> BaseOps2) const {
+  if (BaseOps1.empty() || BaseOps2.empty())
+    return false;
+
+  // Only reorder VMEMs/LDS.
+  // Assume caller has confirmed legality, e.g. aliasing.
+  const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
+  const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
+  return (isVMEM(FirstLdSt) && isVMEM(SecondLdSt)) ||
+         (isDS(FirstLdSt) && isDS(SecondLdSt));
+}
+
 // FIXME: This behaves strangely. If, for example, you have 32 load + stores,
 // the first 16 loads will be interleaved with the stores, and the next 16 will
 // be clustered as expected. It should really split into 2 16 store batches.
