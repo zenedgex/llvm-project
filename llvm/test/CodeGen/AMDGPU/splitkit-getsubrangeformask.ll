@@ -119,8 +119,8 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN5:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM4]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM8:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_5]], 224, 0 :: (invariant load (s128) from %ir.131, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM9:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY7]], 224, 0 :: (invariant load (s128) from %ir.147, addrspace 4)
-  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM10:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_5]], 576, 0 :: (invariant load (s128) from %ir.152, addrspace 4)
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN6:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM5]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+  ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM10:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_5]], 576, 0 :: (invariant load (s128) from %ir.152, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM11:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_6]], 224, 0 :: (invariant load (s128) from %ir.136, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM12:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_7]], 576, 0 :: (invariant load (s128) from %ir.164, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM13:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_8]], 224, 0 :: (invariant load (s128) from %ir.142, addrspace 4)
@@ -153,12 +153,12 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN13:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM10]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]].sub3:sgpr_128 = S_MOV_B32 553734060
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]].sub2:sgpr_128 = S_MOV_B32 -1
-  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:sgpr_128 = COPY [[S_LOAD_DWORDX2_IMM]]
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM15:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_9]], 0, 0 :: (invariant load (s128) from %ir.172, addrspace 4)
+  ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:sgpr_128 = COPY [[S_LOAD_DWORDX2_IMM]]
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]].sub1:sgpr_128 = COPY [[S_MOV_B32_]].sub1
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]].sub0:sgpr_128 = COPY [[S_LOAD_DWORD_IMM]]
-  ; CHECK-NEXT:   [[S_BUFFER_LOAD_DWORD_IMM4:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM [[COPY15]], 0, 0 :: (dereferenceable invariant load (s32))
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN14:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM14]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
+  ; CHECK-NEXT:   [[S_BUFFER_LOAD_DWORD_IMM4:%[0-9]+]]:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM [[COPY15]], 0, 0 :: (dereferenceable invariant load (s32))
   ; CHECK-NEXT:   [[BUFFER_LOAD_FORMAT_X_IDXEN15:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN [[V_MOV_B32_e32_]], [[S_LOAD_DWORDX4_IMM12]], 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 8)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM16:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_10]], 0, 0 :: (invariant load (s128) from %ir.180, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM17:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[S_ADD_U32_11]], 0, 0 :: (invariant load (s128) from %ir.185, addrspace 4)
