@@ -175,10 +175,10 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_f16__vgpr(ptr addrspace(1) %
 ; SDAG-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x44
 ; SDAG-NEXT:    s_load_dword s16, s[4:5], 0x64
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[8:11], v16, s[6:7] offset:32
-; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
+; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[0:3], v16, s[6:7]
+; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
 ; SDAG-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
 ; SDAG-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
 ; SDAG-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
@@ -630,10 +630,10 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x32_bf16__vgpr(ptr addrspace(1) 
 ; GCN-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x44
 ; GCN-NEXT:    s_load_dword s16, s[4:5], 0x64
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; GCN-NEXT:    global_load_dwordx4 v[8:11], v16, s[6:7] offset:32
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; GCN-NEXT:    global_load_dwordx4 v[0:3], v16, s[6:7]
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
 ; GCN-NEXT:    v_mov_b64_e32 v[28:29], s[2:3]
 ; GCN-NEXT:    v_mov_b64_e32 v[26:27], s[0:1]
 ; GCN-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
@@ -959,10 +959,10 @@ define amdgpu_kernel void @test_smfmac_i32_32x32x64_i8__vgpr(ptr addrspace(1) %a
 ; SDAG-NEXT:    s_load_dword s16, s[4:5], 0x64
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[8:11], v16, s[6:7] offset:32
-; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
+; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[0:3], v16, s[6:7]
+; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
 ; SDAG-NEXT:    v_mov_b32_e32 v24, s8
 ; SDAG-NEXT:    v_mov_b32_e32 v25, s9
 ; SDAG-NEXT:    v_mov_b32_e32 v26, s10
@@ -1956,10 +1956,10 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_bf8_bf8__vgpr(ptr addrspace(
 ; SDAG-NEXT:    s_load_dword s16, s[4:5], 0x64
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[8:11], v16, s[6:7] offset:32
-; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
+; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[0:3], v16, s[6:7]
+; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
 ; SDAG-NEXT:    v_mov_b32_e32 v24, s8
 ; SDAG-NEXT:    v_mov_b32_e32 v25, s9
 ; SDAG-NEXT:    v_mov_b32_e32 v26, s10
@@ -2305,10 +2305,10 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_bf8_fp8__vgpr(ptr addrspace(
 ; SDAG-NEXT:    s_load_dword s16, s[4:5], 0x64
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[8:11], v16, s[6:7] offset:32
-; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
+; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[0:3], v16, s[6:7]
+; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
 ; SDAG-NEXT:    v_mov_b32_e32 v24, s8
 ; SDAG-NEXT:    v_mov_b32_e32 v25, s9
 ; SDAG-NEXT:    v_mov_b32_e32 v26, s10
@@ -2654,10 +2654,10 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_fp8_bf8__vgpr(ptr addrspace(
 ; SDAG-NEXT:    s_load_dword s16, s[4:5], 0x64
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[8:11], v16, s[6:7] offset:32
-; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
+; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[0:3], v16, s[6:7]
+; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
 ; SDAG-NEXT:    v_mov_b32_e32 v24, s8
 ; SDAG-NEXT:    v_mov_b32_e32 v25, s9
 ; SDAG-NEXT:    v_mov_b32_e32 v26, s10
@@ -3003,10 +3003,10 @@ define amdgpu_kernel void @test_smfmac_f32_32x32x64_fp8_fp8__vgpr(ptr addrspace(
 ; SDAG-NEXT:    s_load_dword s16, s[4:5], 0x64
 ; SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x54
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[8:11], v16, s[6:7] offset:32
-; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
+; SDAG-NEXT:    global_load_dwordx4 v[12:15], v16, s[6:7] offset:48
 ; SDAG-NEXT:    global_load_dwordx4 v[0:3], v16, s[6:7]
+; SDAG-NEXT:    global_load_dwordx4 v[4:7], v16, s[6:7] offset:16
 ; SDAG-NEXT:    v_mov_b32_e32 v24, s8
 ; SDAG-NEXT:    v_mov_b32_e32 v25, s9
 ; SDAG-NEXT:    v_mov_b32_e32 v26, s10

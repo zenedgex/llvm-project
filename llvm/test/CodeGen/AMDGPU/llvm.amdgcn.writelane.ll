@@ -2530,9 +2530,9 @@ define void @test_writelane_v7i32(ptr addrspace(1) %out, <7 x i32> %src, i32 %sr
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX802-SDAG-NEXT:    v_add_u32_e32 v17, vcc, 16, v0
-; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[10:13], v[0:1]
 ; GFX802-SDAG-NEXT:    v_addc_u32_e32 v18, vcc, 0, v1, vcc
 ; GFX802-SDAG-NEXT:    flat_load_dwordx3 v[14:16], v[17:18]
+; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[10:13], v[0:1]
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v9
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s8, v5
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s9, v4
@@ -2543,12 +2543,12 @@ define void @test_writelane_v7i32(ptr addrspace(1) %out, <7 x i32> %src, i32 %sr
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s6, v7
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s7, v6
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX802-SDAG-NEXT:    v_writelane_b32 v16, s5, m0
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v13, s8, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v12, s9, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v11, s10, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v10, s11, m0
-; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX802-SDAG-NEXT:    v_writelane_b32 v16, s5, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v15, s6, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v14, s7, m0
 ; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[10:13]
@@ -2931,9 +2931,9 @@ define void @test_writelane_v3i64(ptr addrspace(1) %out, <3 x i64> %src, i32 %sr
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX802-SDAG-NEXT:    v_add_u32_e32 v13, vcc, 16, v0
-; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[9:12], v[0:1]
 ; GFX802-SDAG-NEXT:    v_addc_u32_e32 v14, vcc, 0, v1, vcc
 ; GFX802-SDAG-NEXT:    flat_load_dwordx2 v[15:16], v[13:14]
+; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[9:12], v[0:1]
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v8
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s7, v5
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s8, v4
@@ -2943,12 +2943,12 @@ define void @test_writelane_v3i64(ptr addrspace(1) %out, <3 x i64> %src, i32 %sr
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s5, v7
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s6, v6
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX802-SDAG-NEXT:    v_writelane_b32 v16, s5, m0
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v12, s7, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v11, s8, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v10, s9, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v9, s10, m0
-; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX802-SDAG-NEXT:    v_writelane_b32 v16, s5, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v15, s6, m0
 ; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[9:12]
 ; GFX802-SDAG-NEXT:    flat_store_dwordx2 v[13:14], v[15:16]
@@ -3096,9 +3096,9 @@ define void @test_writelane_v4f64(ptr addrspace(1) %out, <4 x double> %src, i32 
 ; GFX802-SDAG:       ; %bb.0:
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX802-SDAG-NEXT:    v_add_u32_e32 v19, vcc, 16, v0
-; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[11:14], v[0:1]
 ; GFX802-SDAG-NEXT:    v_addc_u32_e32 v20, vcc, 0, v1, vcc
-; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[15:18], v[19:20]
+; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[11:14], v[19:20]
+; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[15:18], v[0:1]
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v10
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s9, v5
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s10, v4
@@ -3110,17 +3110,17 @@ define void @test_writelane_v4f64(ptr addrspace(1) %out, <4 x double> %src, i32 
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s7, v7
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s8, v6
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX802-SDAG-NEXT:    v_writelane_b32 v14, s9, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v13, s10, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v12, s11, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v11, s12, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v14, s5, m0
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX802-SDAG-NEXT:    v_writelane_b32 v18, s5, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v17, s6, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v16, s7, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v15, s8, m0
-; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[11:14]
-; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[19:20], v[15:18]
+; GFX802-SDAG-NEXT:    v_writelane_b32 v18, s9, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v17, s10, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v16, s11, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v15, s12, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v13, s6, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v12, s7, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v11, s8, m0
+; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[15:18]
+; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[19:20], v[11:14]
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3285,21 +3285,21 @@ define void @test_writelane_v8f64(ptr addrspace(1) %out, <8 x double> %src, i32 
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v18
 ; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[18:21], v[0:1]
-; GFX802-SDAG-NEXT:    v_add_u32_e32 v22, vcc, 16, v0
+; GFX802-SDAG-NEXT:    v_add_u32_e32 v22, vcc, 32, v0
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s5, v5
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s6, v4
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s7, v3
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s8, v2
 ; GFX802-SDAG-NEXT:    v_addc_u32_e32 v23, vcc, 0, v1, vcc
 ; GFX802-SDAG-NEXT:    s_mov_b32 m0, s4
-; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[2:5], v[22:23]
-; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v9
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s10, v15
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s11, v14
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s12, v13
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s13, v12
+; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[12:15], v[22:23]
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s14, v11
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s15, v10
+; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s4, v9
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s9, v16
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v21, s5, m0
@@ -3307,34 +3307,34 @@ define void @test_writelane_v8f64(ptr addrspace(1) %out, <8 x double> %src, i32 
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v19, s7, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v18, s8, m0
 ; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[18:21]
-; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s5, v8
-; GFX802-SDAG-NEXT:    v_add_u32_e32 v18, vcc, 32, v0
-; GFX802-SDAG-NEXT:    v_addc_u32_e32 v19, vcc, 0, v1, vcc
-; GFX802-SDAG-NEXT:    v_add_u32_e32 v0, vcc, 48, v0
-; GFX802-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s6, v7
+; GFX802-SDAG-NEXT:    v_add_u32_e32 v18, vcc, 48, v0
+; GFX802-SDAG-NEXT:    v_addc_u32_e32 v19, vcc, 0, v1, vcc
+; GFX802-SDAG-NEXT:    v_add_u32_e32 v20, vcc, 16, v0
+; GFX802-SDAG-NEXT:    v_addc_u32_e32 v21, vcc, 0, v1, vcc
+; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[20:21]
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s7, v6
-; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[6:9], v[0:1]
-; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[12:15], v[18:19]
+; GFX802-SDAG-NEXT:    flat_load_dwordx4 v[4:7], v[18:19]
+; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s5, v8
 ; GFX802-SDAG-NEXT:    v_readfirstlane_b32 s8, v17
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX802-SDAG-NEXT:    v_writelane_b32 v5, s4, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v4, s5, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v3, s6, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v2, s7, m0
-; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX802-SDAG-NEXT:    v_writelane_b32 v9, s8, m0
-; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v15, s12, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v14, s13, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v13, s14, m0
 ; GFX802-SDAG-NEXT:    v_writelane_b32 v12, s15, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v8, s9, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v7, s10, m0
-; GFX802-SDAG-NEXT:    v_writelane_b32 v6, s11, m0
-; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[18:19], v[12:15]
-; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[0:1], v[6:9]
-; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[22:23], v[2:5]
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(1)
+; GFX802-SDAG-NEXT:    v_writelane_b32 v3, s4, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v2, s5, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v1, s6, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v0, s7, m0
+; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; GFX802-SDAG-NEXT:    v_writelane_b32 v7, s8, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v6, s9, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v5, s10, m0
+; GFX802-SDAG-NEXT:    v_writelane_b32 v4, s11, m0
+; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[22:23], v[12:15]
+; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[18:19], v[4:7]
+; GFX802-SDAG-NEXT:    flat_store_dwordx4 v[20:21], v[0:3]
 ; GFX802-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX802-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -5146,11 +5146,11 @@ define amdgpu_kernel void @idot4_acc32_hilo(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX9-DL-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX9-DL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DL-NEXT:    global_load_dword v1, v0, s[0:1] offset:4
-; GFX9-DL-NEXT:    global_load_dword v2, v0, s[2:3]
+; GFX9-DL-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX9-DL-NEXT:    global_load_dword v2, v0, s[0:1] offset:4
 ; GFX9-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DL-NEXT:    v_dot4_u32_u8 v1, v1, v2, 0
+; GFX9-DL-NEXT:    v_dot4_u32_u8 v1, v2, v1, 0
 ; GFX9-DL-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-DL-NEXT:    s_endpgm
 ;
@@ -5162,11 +5162,11 @@ define amdgpu_kernel void @idot4_acc32_hilo(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DL-NEXT:    s_clause 0x1
-; GFX10-DL-NEXT:    global_load_dword v1, v0, s[0:1] offset:4
-; GFX10-DL-NEXT:    global_load_dword v2, v0, s[2:3]
+; GFX10-DL-NEXT:    global_load_dword v1, v0, s[2:3]
+; GFX10-DL-NEXT:    global_load_dword v2, v0, s[0:1] offset:4
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NEXT:    v_dot4_u32_u8 v1, v1, v2, 0
+; GFX10-DL-NEXT:    v_dot4_u32_u8 v1, v2, v1, 0
 ; GFX10-DL-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX10-DL-NEXT:    s_endpgm
 ;
@@ -5180,10 +5180,10 @@ define amdgpu_kernel void @idot4_acc32_hilo(ptr addrspace(1) %src1,
 ; GFX11-DL-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-DL-NEXT:    s_clause 0x1
-; GFX11-DL-NEXT:    global_load_b32 v1, v0, s[0:1] offset:4
-; GFX11-DL-NEXT:    global_load_b32 v0, v0, s[2:3]
+; GFX11-DL-NEXT:    global_load_b32 v1, v0, s[2:3]
+; GFX11-DL-NEXT:    global_load_b32 v0, v0, s[0:1] offset:4
 ; GFX11-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-DL-NEXT:    v_dot4_u32_u8 v0, v1, v0, 0
+; GFX11-DL-NEXT:    v_dot4_u32_u8 v0, v0, v1, 0
 ; GFX11-DL-NEXT:    global_store_b32 v2, v0, s[4:5]
 ; GFX11-DL-NEXT:    s_endpgm
                                        ptr addrspace(1) %src2,

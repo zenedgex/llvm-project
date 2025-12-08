@@ -2962,37 +2962,38 @@ define void @freeze_v19i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-LABEL: freeze_v19i32:
 ; GFX8-GISEL:       ; %bb.0:
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 16, v0
-; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v8, vcc, 32, v0
-; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v8, vcc, 16, v0
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
+; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v12, vcc, 32, v0
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v13, vcc, 0, v1, vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v16, vcc, 48, v0
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v17, vcc, 0, v1, vcc
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v20, vcc, 64, v0
-; GFX8-GISEL-NEXT:    v_addc_u32_e32 v21, vcc, 0, v1, vcc
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v0, vcc, 64, v0
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
-; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[12:15], v[0:1]
+; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
 ; GFX8-GISEL-NEXT:    flat_load_dwordx4 v[16:19], v[16:17]
-; GFX8-GISEL-NEXT:    flat_load_dwordx3 v[20:22], v[20:21]
+; GFX8-GISEL-NEXT:    flat_load_dwordx3 v[20:22], v[0:1]
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v0, vcc, 16, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(4)
-; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v0, vcc, 32, v2
-; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
+; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[4:7]
+; GFX8-GISEL-NEXT:    s_nop 0
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 32, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, 64, v2
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, 48, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v2, vcc, 64, v2
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(4)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[0:1], v[8:11]
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(4)
-; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[12:15]
+; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[12:15]
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(4)
-; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[16:19]
+; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[6:7], v[16:19]
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(4)
-; GFX8-GISEL-NEXT:    flat_store_dwordx3 v[6:7], v[20:22]
+; GFX8-GISEL-NEXT:    flat_store_dwordx3 v[2:3], v[20:22]
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10349,24 +10350,24 @@ define void @freeze_v8p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
 ; GFX6-SDAG-LABEL: freeze_v8p3:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 24, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 16, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 8, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 24, v0
 ; GFX6-SDAG-NEXT:    s_mov_b32 m0, -1
-; GFX6-SDAG-NEXT:    ds_read_b64 v[2:3], v2
+; GFX6-SDAG-NEXT:    ds_read_b64 v[2:3], v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 16, v0
 ; GFX6-SDAG-NEXT:    ds_read_b64 v[4:5], v4
 ; GFX6-SDAG-NEXT:    ds_read_b64 v[6:7], v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 8, v0
-; GFX6-SDAG-NEXT:    ds_read_b64 v[8:9], v0
+; GFX6-SDAG-NEXT:    ds_read_b64 v[8:9], v8
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 16, v1
+; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX6-SDAG-NEXT:    ds_write_b64 v1, v[2:3]
 ; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[4:5]
+; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[6:7]
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 24, v1
-; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[2:3]
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 8, v1
-; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
-; GFX6-SDAG-NEXT:    ds_write_b64 v1, v[6:7]
-; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(2)
 ; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[8:9]
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 8, v1
+; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[4:5]
 ; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10502,40 +10503,39 @@ define void @freeze_v16p3(ptr addrspace(3) %ptra, ptr addrspace(3) %ptrb) {
 ; GFX6-SDAG-LABEL: freeze_v16p3:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 8, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 24, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 16, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v10, vcc, 40, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v12, vcc, 32, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v16, vcc, 56, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v14, vcc, 48, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v12, vcc, 8, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v14, vcc, 24, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v16, vcc, 16, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 40, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 32, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 56, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v10, vcc, 48, v0
 ; GFX6-SDAG-NEXT:    s_mov_b32 m0, -1
-; GFX6-SDAG-NEXT:    ds_read_b64 v[2:3], v2
+; GFX6-SDAG-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX6-SDAG-NEXT:    ds_read_b64 v[4:5], v4
 ; GFX6-SDAG-NEXT:    ds_read_b64 v[6:7], v6
-; GFX6-SDAG-NEXT:    ds_read_b64 v[8:9], v0
+; GFX6-SDAG-NEXT:    ds_read_b64 v[8:9], v8
 ; GFX6-SDAG-NEXT:    ds_read_b64 v[10:11], v10
 ; GFX6-SDAG-NEXT:    ds_read_b64 v[12:13], v12
 ; GFX6-SDAG-NEXT:    ds_read_b64 v[14:15], v14
 ; GFX6-SDAG-NEXT:    ds_read_b64 v[16:17], v16
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 48, v1
-; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(4)
-; GFX6-SDAG-NEXT:    ds_write_b64 v1, v[8:9]
-; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[14:15]
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 56, v1
-; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[16:17]
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 32, v1
-; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[12:13]
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 40, v1
+; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
 ; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[10:11]
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 16, v1
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 56, v1
+; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[8:9]
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 32, v1
 ; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[6:7]
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 24, v1
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 40, v1
 ; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[4:5]
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 16, v1
+; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[16:17]
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 24, v1
+; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[14:15]
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 8, v1
-; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[2:3]
+; GFX6-SDAG-NEXT:    ds_write_b64 v1, v[2:3]
+; GFX6-SDAG-NEXT:    ds_write_b64 v0, v[12:13]
 ; GFX6-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10794,75 +10794,47 @@ define void @freeze_p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 }
 
 define void @freeze_v2p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
-; GFX6-SDAG-LABEL: freeze_v2p5:
-; GFX6-SDAG:       ; %bb.0:
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 4, v0
-; GFX6-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 4, v1
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-SDAG-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
-; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-LABEL: freeze_v2p5:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX6-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
+; GFX6-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX6-NEXT:    s_waitcnt vmcnt(1)
+; GFX6-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
+; GFX6-NEXT:    v_add_i32_e32 v1, vcc, 4, v1
+; GFX6-NEXT:    s_waitcnt vmcnt(1)
+; GFX6-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX6-GISEL-LABEL: freeze_v2p5:
-; GFX6-GISEL:       ; %bb.0:
-; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-GISEL-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
-; GFX6-GISEL-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
-; GFX6-GISEL-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-GISEL-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
-; GFX6-GISEL-NEXT:    v_add_i32_e32 v1, vcc, 4, v1
-; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-GISEL-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
-; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: freeze_v2p5:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
+; GFX7-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX7-NEXT:    s_waitcnt vmcnt(1)
+; GFX7-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
+; GFX7-NEXT:    v_add_i32_e32 v1, vcc, 4, v1
+; GFX7-NEXT:    s_waitcnt vmcnt(1)
+; GFX7-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX7-SDAG-LABEL: freeze_v2p5:
-; GFX7-SDAG:       ; %bb.0:
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 4, v0
-; GFX7-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 4, v1
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-SDAG-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-GISEL-LABEL: freeze_v2p5:
-; GFX7-GISEL:       ; %bb.0:
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-GISEL-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
-; GFX7-GISEL-NEXT:    v_add_i32_e32 v0, vcc, 4, v0
-; GFX7-GISEL-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-GISEL-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
-; GFX7-GISEL-NEXT:    v_add_i32_e32 v1, vcc, 4, v1
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-GISEL-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-GISEL-LABEL: freeze_v2p5:
-; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
-; GFX8-GISEL-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX8-GISEL-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v1, vcc, 4, v1
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GFX8-GISEL-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-LABEL: freeze_v2p5:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 offen
+; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
+; GFX8-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX8-NEXT:    s_waitcnt vmcnt(1)
+; GFX8-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 offen
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, 4, v1
+; GFX8-NEXT:    s_waitcnt vmcnt(1)
+; GFX8-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: freeze_v2p5:
 ; GFX9:       ; %bb.0:
@@ -10905,18 +10877,19 @@ define void @freeze_v3p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX6-SDAG-LABEL: freeze_v3p5:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 4, v0
-; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 8, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 8, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 4, v0
 ; GFX6-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 4, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 8, v1
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-SDAG-NEXT:    buffer_store_dword v3, v1, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX6-SDAG-NEXT:    buffer_store_dword v0, v5, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX6-SDAG-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX6-SDAG-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10942,18 +10915,19 @@ define void @freeze_v3p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX7-SDAG-LABEL: freeze_v3p5:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 4, v0
-; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v3, v0, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 8, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 8, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 4, v0
 ; GFX7-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 4, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 8, v1
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-SDAG-NEXT:    buffer_store_dword v3, v1, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v2, v4, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(2)
-; GFX7-SDAG-NEXT:    buffer_store_dword v0, v5, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX7-SDAG-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(2)
+; GFX7-SDAG-NEXT:    buffer_store_dword v2, v5, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -11042,22 +11016,24 @@ define void @freeze_v4p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX6-SDAG-LABEL: freeze_v4p5:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 8, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 4, v0
-; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 12, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 12, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 8, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 4, v0
 ; GFX6-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 4, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 8, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 12, v1
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-SDAG-NEXT:    buffer_store_dword v4, v1, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v2, v6, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX6-SDAG-NEXT:    buffer_store_dword v0, v7, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX6-SDAG-NEXT:    buffer_store_dword v4, v5, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX6-SDAG-NEXT:    buffer_store_dword v3, v6, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX6-SDAG-NEXT:    buffer_store_dword v2, v7, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -11088,22 +11064,24 @@ define void @freeze_v4p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX7-SDAG-LABEL: freeze_v4p5:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 8, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 4, v0
-; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v4, v0, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 12, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 12, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 8, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 4, v0
 ; GFX7-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 4, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 8, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 12, v1
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-SDAG-NEXT:    buffer_store_dword v4, v1, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v3, v5, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v2, v6, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(3)
-; GFX7-SDAG-NEXT:    buffer_store_dword v0, v7, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX7-SDAG-NEXT:    buffer_store_dword v4, v5, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX7-SDAG-NEXT:    buffer_store_dword v3, v6, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(3)
+; GFX7-SDAG-NEXT:    buffer_store_dword v2, v7, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -11208,21 +11186,21 @@ define void @freeze_v8p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX6-SDAG-LABEL: freeze_v8p5:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 24, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 20, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 16, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 12, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 8, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
-; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v5, v5, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v6, v6, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v7, v7, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v8, v0, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 28, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 28, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 24, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 20, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 16, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 12, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 8, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 4, v0
 ; GFX6-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v8, v8, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v7, v7, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v6, v6, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v5, v5, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v9, vcc, 4, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v10, vcc, 8, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v11, vcc, 12, v1
@@ -11230,16 +11208,22 @@ define void @freeze_v8p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v13, vcc, 20, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v14, vcc, 24, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v15, vcc, 28, v1
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX6-SDAG-NEXT:    buffer_store_dword v8, v1, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v7, v9, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v6, v10, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v5, v11, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v4, v12, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v3, v13, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v2, v14, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX6-SDAG-NEXT:    buffer_store_dword v0, v15, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX6-SDAG-NEXT:    buffer_store_dword v8, v9, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX6-SDAG-NEXT:    buffer_store_dword v7, v10, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX6-SDAG-NEXT:    buffer_store_dword v6, v11, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX6-SDAG-NEXT:    buffer_store_dword v5, v12, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX6-SDAG-NEXT:    buffer_store_dword v4, v13, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX6-SDAG-NEXT:    buffer_store_dword v3, v14, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX6-SDAG-NEXT:    buffer_store_dword v2, v15, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -11290,21 +11274,21 @@ define void @freeze_v8p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX7-SDAG-LABEL: freeze_v8p5:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 24, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 20, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 16, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 12, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 8, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
-; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v5, v5, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v6, v6, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v7, v7, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v8, v0, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 28, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 28, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 24, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 20, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 16, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 12, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 8, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 4, v0
 ; GFX7-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v8, v8, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v7, v7, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v6, v6, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v5, v5, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v9, vcc, 4, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v10, vcc, 8, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v11, vcc, 12, v1
@@ -11312,16 +11296,22 @@ define void @freeze_v8p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v13, vcc, 20, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v14, vcc, 24, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v15, vcc, 28, v1
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-SDAG-NEXT:    buffer_store_dword v8, v1, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v7, v9, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v6, v10, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v5, v11, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v4, v12, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v3, v13, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v2, v14, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(7)
-; GFX7-SDAG-NEXT:    buffer_store_dword v0, v15, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX7-SDAG-NEXT:    buffer_store_dword v8, v9, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX7-SDAG-NEXT:    buffer_store_dword v7, v10, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX7-SDAG-NEXT:    buffer_store_dword v6, v11, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX7-SDAG-NEXT:    buffer_store_dword v5, v12, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX7-SDAG-NEXT:    buffer_store_dword v4, v13, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX7-SDAG-NEXT:    buffer_store_dword v3, v14, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(7)
+; GFX7-SDAG-NEXT:    buffer_store_dword v2, v15, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -11506,79 +11496,77 @@ define void @freeze_v16p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX6-SDAG-LABEL: freeze_v16p5:
 ; GFX6-SDAG:       ; %bb.0:
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 16, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 12, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 8, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 4, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 12, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 8, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 4, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 32, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 28, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 24, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 20, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v9, vcc, 16, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v10, vcc, 44, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v12, vcc, 40, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v13, vcc, 36, v0
+; GFX6-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v9, v9, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    buffer_load_dword v5, v5, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    buffer_load_dword v6, v6, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    buffer_load_dword v7, v7, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    buffer_load_dword v8, v8, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 56, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 52, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 48, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v9, vcc, 44, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v10, vcc, 40, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v11, vcc, 36, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v12, vcc, 32, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v13, vcc, 28, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v14, vcc, 24, v0
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v15, vcc, 20, v0
-; GFX6-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v9, v9, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v10, v10, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v11, v11, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v16, v0, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v15, v15, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_load_dword v14, v14, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v11, v0, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    buffer_load_dword v13, v13, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    buffer_load_dword v12, v12, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v10, v10, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v14, vcc, 48, v0
+; GFX6-SDAG-NEXT:    buffer_load_dword v14, v14, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v15, vcc, 52, v0
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v16, vcc, 56, v0
+; GFX6-SDAG-NEXT:    buffer_load_dword v15, v15, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_load_dword v16, v16, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 60, v0
 ; GFX6-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v17, vcc, 4, v1
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v18, vcc, 8, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v19, vcc, 12, v1
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v18, vcc, 8, v1
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(14)
-; GFX6-SDAG-NEXT:    buffer_store_dword v6, v19, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(14)
-; GFX6-SDAG-NEXT:    buffer_store_dword v7, v18, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(14)
-; GFX6-SDAG-NEXT:    buffer_store_dword v8, v17, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v4, v17, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt expcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 16, v1
-; GFX6-SDAG-NEXT:    buffer_store_dword v5, v8, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 16, v1
+; GFX6-SDAG-NEXT:    buffer_store_dword v2, v19, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt expcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 40, v1
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 32, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v17, vcc, 20, v1
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 24, v1
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(14)
+; GFX6-SDAG-NEXT:    buffer_store_dword v3, v18, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt expcnt(0)
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 24, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v18, vcc, 28, v1
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 32, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v19, vcc, 36, v1
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 44, v1
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX6-SDAG-NEXT:    buffer_store_dword v16, v1, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX6-SDAG-NEXT:    buffer_store_dword v15, v17, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX6-SDAG-NEXT:    buffer_store_dword v14, v7, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX6-SDAG-NEXT:    buffer_store_dword v13, v18, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX6-SDAG-NEXT:    buffer_store_dword v12, v6, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v11, v19, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v10, v5, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    buffer_store_dword v9, v8, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 48, v1
-; GFX6-SDAG-NEXT:    buffer_store_dword v4, v5, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v9, v4, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 40, v1
 ; GFX6-SDAG-NEXT:    s_waitcnt expcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 52, v1
-; GFX6-SDAG-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen
-; GFX6-SDAG-NEXT:    s_waitcnt expcnt(0)
-; GFX6-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 56, v1
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v9, vcc, 44, v1
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(11)
+; GFX6-SDAG-NEXT:    buffer_store_dword v11, v1, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v8, v17, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v7, v3, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v6, v18, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(14)
+; GFX6-SDAG-NEXT:    buffer_store_dword v13, v19, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v12, v4, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(14)
+; GFX6-SDAG-NEXT:    buffer_store_dword v10, v9, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 48, v1
+; GFX6-SDAG-NEXT:    buffer_store_dword v14, v2, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 52, v1
+; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(14)
+; GFX6-SDAG-NEXT:    buffer_store_dword v15, v2, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 56, v1
 ; GFX6-SDAG-NEXT:    v_add_i32_e32 v1, vcc, 60, v1
-; GFX6-SDAG-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
+; GFX6-SDAG-NEXT:    buffer_store_dword v16, v2, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(14)
 ; GFX6-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
@@ -11668,75 +11656,73 @@ define void @freeze_v16p5(ptr addrspace(5) %ptra, ptr addrspace(5) %ptrb) {
 ; GFX7-SDAG-LABEL: freeze_v16p5:
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 16, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 12, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 8, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 4, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 12, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 8, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 4, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 32, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 28, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 24, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 20, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v9, vcc, 16, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v10, vcc, 44, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v12, vcc, 40, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v13, vcc, 36, v0
+; GFX7-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v9, v9, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    buffer_load_dword v5, v5, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    buffer_load_dword v6, v6, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    buffer_load_dword v7, v7, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    buffer_load_dword v8, v8, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 56, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 52, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 48, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v9, vcc, 44, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v10, vcc, 40, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v11, vcc, 36, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v12, vcc, 32, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v13, vcc, 28, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v14, vcc, 24, v0
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v15, vcc, 20, v0
-; GFX7-SDAG-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v3, v3, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v4, v4, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v9, v9, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v10, v10, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v11, v11, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v16, v0, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v15, v15, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_load_dword v14, v14, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v11, v0, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    buffer_load_dword v13, v13, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    buffer_load_dword v12, v12, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v10, v10, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v14, vcc, 48, v0
+; GFX7-SDAG-NEXT:    buffer_load_dword v14, v14, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v15, vcc, 52, v0
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v16, vcc, 56, v0
+; GFX7-SDAG-NEXT:    buffer_load_dword v15, v15, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_load_dword v16, v16, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v0, vcc, 60, v0
 ; GFX7-SDAG-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v17, vcc, 4, v1
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v18, vcc, 8, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v19, vcc, 12, v1
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v18, vcc, 8, v1
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(14)
-; GFX7-SDAG-NEXT:    buffer_store_dword v6, v19, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(14)
-; GFX7-SDAG-NEXT:    buffer_store_dword v7, v18, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(14)
-; GFX7-SDAG-NEXT:    buffer_store_dword v8, v17, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 16, v1
-; GFX7-SDAG-NEXT:    buffer_store_dword v5, v8, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 40, v1
+; GFX7-SDAG-NEXT:    buffer_store_dword v4, v17, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 16, v1
+; GFX7-SDAG-NEXT:    buffer_store_dword v2, v19, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 32, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v17, vcc, 20, v1
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v7, vcc, 24, v1
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(14)
+; GFX7-SDAG-NEXT:    buffer_store_dword v3, v18, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 24, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v18, vcc, 28, v1
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v6, vcc, 32, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v19, vcc, 36, v1
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v8, vcc, 44, v1
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX7-SDAG-NEXT:    buffer_store_dword v16, v1, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX7-SDAG-NEXT:    buffer_store_dword v15, v17, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX7-SDAG-NEXT:    buffer_store_dword v14, v7, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX7-SDAG-NEXT:    buffer_store_dword v13, v18, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(9)
-; GFX7-SDAG-NEXT:    buffer_store_dword v12, v6, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v11, v19, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v10, v5, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    buffer_store_dword v9, v8, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v5, vcc, 48, v1
-; GFX7-SDAG-NEXT:    buffer_store_dword v4, v5, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 52, v1
-; GFX7-SDAG-NEXT:    buffer_store_dword v3, v4, s[0:3], 0 offen
-; GFX7-SDAG-NEXT:    v_add_i32_e32 v3, vcc, 56, v1
+; GFX7-SDAG-NEXT:    buffer_store_dword v9, v4, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v4, vcc, 40, v1
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v9, vcc, 44, v1
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(11)
+; GFX7-SDAG-NEXT:    buffer_store_dword v11, v1, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v8, v17, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v7, v3, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v6, v18, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v5, v2, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(14)
+; GFX7-SDAG-NEXT:    buffer_store_dword v13, v19, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v12, v4, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(14)
+; GFX7-SDAG-NEXT:    buffer_store_dword v10, v9, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 48, v1
+; GFX7-SDAG-NEXT:    buffer_store_dword v14, v2, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 52, v1
+; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(14)
+; GFX7-SDAG-NEXT:    buffer_store_dword v15, v2, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    v_add_i32_e32 v2, vcc, 56, v1
 ; GFX7-SDAG-NEXT:    v_add_i32_e32 v1, vcc, 60, v1
-; GFX7-SDAG-NEXT:    buffer_store_dword v2, v3, s[0:3], 0 offen
+; GFX7-SDAG-NEXT:    buffer_store_dword v16, v2, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(14)
 ; GFX7-SDAG-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
