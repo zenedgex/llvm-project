@@ -721,6 +721,15 @@ private:
   // one parameter. Similarly for operands and attributes.
   void genCollectiveParamBuilder(CollectiveBuilderKind kind);
 
+  void emitImmediateRegionTerminator(MethodBody &body, const Operator &op) {
+    for (const auto &t : op.getTraits()) {
+      if (t.getDef().getName() == "ImmediateRegionTerminator") {
+        body << "  " << builderOpState << ".setNumBreakingControlRegions(1);\n";
+        break;
+      }
+    }
+  }
+
   // The kind of parameter to generate for result types in builders.
   enum class TypeParamKind {
     None,       // No result type in parameter list.
@@ -2683,6 +2692,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
     genInlineCreateBody(paramList);
 
     auto &body = m->body();
+    emitImmediateRegionTerminator(body, op);
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
                                                AttrParamKind::UnwrappedValue);
@@ -2812,6 +2822,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder(
     return;
   genInlineCreateBody(paramList);
   auto &body = m->body();
+  emitImmediateRegionTerminator(body, op);
 
   // Operands
   body << "  " << builderOpState << ".addOperands(operands);\n";
@@ -3008,6 +3019,7 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
       return;
     genInlineCreateBody(paramList);
     auto &body = m->body();
+    emitImmediateRegionTerminator(body, op);
     genCodeForAddingArgAndRegionForBuilder(body, inferredAttributes,
                                            /*isRawValueAttr=*/attrType ==
                                                AttrParamKind::UnwrappedValue);
@@ -3052,6 +3064,7 @@ void OpEmitter::genUseAttrAsResultTypeCollectiveParamBuilder(
   genInlineCreateBody(paramList);
 
   auto &body = m->body();
+  emitImmediateRegionTerminator(body, op);
 
   // Push all result types to the operation state
   std::string resultType;
@@ -3218,6 +3231,7 @@ void OpEmitter::genCollectiveParamBuilder(CollectiveBuilderKind kind) {
     return;
   genInlineCreateBody(paramList);
   auto &body = m->body();
+  emitImmediateRegionTerminator(body, op);
 
   // Operands
   if (numVariadicOperands == 0 || numNonVariadicOperands != 0)

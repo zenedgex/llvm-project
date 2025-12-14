@@ -2268,7 +2268,8 @@ LogicalResult ConversionPatternRewriter::legalize(Region *r) {
   SmallVector<Operation *> ops;
   for (Block &b : *r)
     for (Operation &op : b)
-      ops.push_back(&op);
+      op.walk<WalkOrder::PreOrder, ForwardDominanceIterator<>>(
+          [&](Operation *op) { ops.push_back(op); });
 
   // If the current pattern runs with a type converter, convert the entry block
   // signature.
