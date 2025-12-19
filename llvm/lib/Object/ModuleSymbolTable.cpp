@@ -15,6 +15,7 @@
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "RecordStreamer.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -49,7 +50,8 @@
 using namespace llvm;
 using namespace object;
 
-void ModuleSymbolTable::addModule(Module *M) {
+void ModuleSymbolTable::addModule(Module *M, StringRef CPU,
+                                  StringRef Features) {
   if (FirstMod)
     assert(FirstMod->getTargetTriple() == M->getTargetTriple());
   else
@@ -58,15 +60,19 @@ void ModuleSymbolTable::addModule(Module *M) {
   for (GlobalValue &GV : M->global_values())
     SymTab.push_back(&GV);
 
-  CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-    SymTab.push_back(new (AsmSymbols.Allocate())
-                         AsmSymbol(std::string(Name), Flags));
-  });
+  CollectAsmSymbols(
+      *M,
+      [this](StringRef Name, BasicSymbolRef::Flags Flags) {
+        SymTab.push_back(new (AsmSymbols.Allocate())
+                             AsmSymbol(std::string(Name), Flags));
+      },
+      /*DiagHandler=*/nullptr, CPU, Features);
 }
 
-static void
-initializeRecordStreamer(const Module &M,
-                         function_ref<void(RecordStreamer &)> Init) {
+static void initializeRecordStreamer(
+    const Module &M, StringRef CPU, StringRef Features,
+    function_ref<void(RecordStreamer &)> Init,
+    function_ref<void(const DiagnosticInfo &DI)> DiagHandler) {
   // This function may be called twice, once for ModuleSummaryIndexAnalysis and
   // the other when writing the IR symbol table. If parsing inline assembly has
   // caused errors in the first run, suppress the second run.
@@ -90,7 +96,8 @@ initializeRecordStreamer(const Module &M,
   if (!MAI)
     return;
 
-  std::unique_ptr<MCSubtargetInfo> STI(T->createMCSubtargetInfo(TT, "", ""));
+  std::unique_ptr<MCSubtargetInfo> STI(
+      T->createMCSubtargetInfo(TT, CPU, Features));
   if (!STI)
     return;
 
@@ -121,8 +128,12 @@ initializeRecordStreamer(const Module &M,
   MCCtx.setDiagnosticHandler([&](const SMDiagnostic &SMD, bool IsInlineAsm,
                                  const SourceMgr &SrcMgr,
                                  std::vector<const MDNode *> &LocInfos) {
-    M.getContext().diagnose(
-        DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, /*LocCookie=*/0));
+    DiagnosticInfoSrcMgr Diag(SMD, M.getName(), IsInlineAsm, /*LocCookie=*/0);
+    if (DiagHandler) {
+      DiagHandler(Diag);
+      return;
+    }
+    M.getContext().diagnose(Diag);
   });
 
   // Module-level inline asm is assumed to use At&t syntax (see
@@ -138,39 +149,60 @@ initializeRecordStreamer(const Module &M,
 
 void ModuleSymbolTable::CollectAsmSymbols(
     const Module &M,
-    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
-  initializeRecordStreamer(M, [&](RecordStreamer &Streamer) {
-    Streamer.flushSymverDirectives();
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol,
+    function_ref<void(const DiagnosticInfo &DI)> DiagHandler, StringRef CPU,
+    StringRef Features) {
 
-    for (auto &KV : Streamer) {
-      StringRef Key = KV.first();
-      RecordStreamer::State Value = KV.second;
-      // FIXME: For now we just assume that all asm symbols are executable.
-      uint32_t Res = BasicSymbolRef::SF_Executable;
-      switch (Value) {
-      case RecordStreamer::NeverSeen:
-        llvm_unreachable("NeverSeen should have been replaced earlier");
-      case RecordStreamer::DefinedGlobal:
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::Defined:
-        break;
-      case RecordStreamer::Global:
-      case RecordStreamer::Used:
-        Res |= BasicSymbolRef::SF_Undefined;
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::DefinedWeak:
-        Res |= BasicSymbolRef::SF_Weak;
-        Res |= BasicSymbolRef::SF_Global;
-        break;
-      case RecordStreamer::UndefinedWeak:
-        Res |= BasicSymbolRef::SF_Weak;
-        Res |= BasicSymbolRef::SF_Undefined;
-      }
-      AsmSymbol(Key, BasicSymbolRef::Flags(Res));
+  MDTuple *SymbolsMD =
+      dyn_cast_if_present<MDTuple>(M.getModuleFlag("global-asm-symbols"));
+
+  if (SymbolsMD) {
+    for (const Metadata *MD : SymbolsMD->operands()) {
+      const MDTuple *SymMD = cast<MDTuple>(MD);
+      const MDString *Name = cast<MDString>(SymMD->getOperand(0));
+      const ConstantInt *Flags =
+          mdconst::extract<ConstantInt>(SymMD->getOperand(1));
+      AsmSymbol(Name->getString(),
+                static_cast<BasicSymbolRef::Flags>(Flags->getZExtValue()));
     }
-  });
+    return;
+  }
+
+  initializeRecordStreamer(
+      M, CPU, Features,
+      [&](RecordStreamer &Streamer) {
+        Streamer.flushSymverDirectives();
+
+        for (auto &KV : Streamer) {
+          StringRef Key = KV.first();
+          RecordStreamer::State Value = KV.second;
+          // FIXME: For now we just assume that all asm symbols are executable.
+          uint32_t Res = BasicSymbolRef::SF_Executable;
+          switch (Value) {
+          case RecordStreamer::NeverSeen:
+            llvm_unreachable("NeverSeen should have been replaced earlier");
+          case RecordStreamer::DefinedGlobal:
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::Defined:
+            break;
+          case RecordStreamer::Global:
+          case RecordStreamer::Used:
+            Res |= BasicSymbolRef::SF_Undefined;
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::DefinedWeak:
+            Res |= BasicSymbolRef::SF_Weak;
+            Res |= BasicSymbolRef::SF_Global;
+            break;
+          case RecordStreamer::UndefinedWeak:
+            Res |= BasicSymbolRef::SF_Weak;
+            Res |= BasicSymbolRef::SF_Undefined;
+          }
+          AsmSymbol(Key, BasicSymbolRef::Flags(Res));
+        }
+      },
+      DiagHandler);
 
   // In ELF, object code generated for x86-32 and some code models of x86-64 may
   // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the
@@ -188,12 +220,32 @@ void ModuleSymbolTable::CollectAsmSymbols(
 }
 
 void ModuleSymbolTable::CollectAsmSymvers(
-    const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver) {
-  initializeRecordStreamer(M, [&](RecordStreamer &Streamer) {
-    for (auto &KV : Streamer.symverAliases())
-      for (auto &Alias : KV.second)
-        AsmSymver(KV.first->getName(), Alias);
-  });
+    const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver,
+    function_ref<void(const DiagnosticInfo &DI)> DiagHandler, StringRef CPU,
+    StringRef Features) {
+
+  MDTuple *SymversMD =
+      dyn_cast_if_present<MDTuple>(M.getModuleFlag("global-asm-symvers"));
+
+  if (SymversMD) {
+    for (const Metadata *MD : SymversMD->operands()) {
+      const MDTuple *SymverMD = cast<MDTuple>(MD);
+      StringRef Name = cast<MDString>(SymverMD->getOperand(0))->getString();
+      for (unsigned i = 1; i < SymverMD->getNumOperands(); ++i) {
+        AsmSymver(Name, cast<MDString>(SymverMD->getOperand(i))->getString());
+      }
+    }
+    return;
+  }
+
+  initializeRecordStreamer(
+      M, CPU, Features,
+      [&](RecordStreamer &Streamer) {
+        for (auto &KV : Streamer.symverAliases())
+          for (auto &Alias : KV.second)
+            AsmSymver(KV.first->getName(), Alias);
+      },
+      DiagHandler);
 }
 
 void ModuleSymbolTable::printSymbolName(raw_ostream &OS, Symbol S) const {
