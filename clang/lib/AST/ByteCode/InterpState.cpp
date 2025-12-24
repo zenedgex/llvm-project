@@ -22,6 +22,7 @@ InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
     : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
       Current(&BottomFrame) {
   InConstantContext = Parent.InConstantContext;
+  TryConstantInitialization = Parent.TryConstantInitialization;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
@@ -34,6 +35,7 @@ InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
       Current(&BottomFrame) {
   InConstantContext = Parent.InConstantContext;
+  TryConstantInitialization = Parent.TryConstantInitialization;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
   CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
