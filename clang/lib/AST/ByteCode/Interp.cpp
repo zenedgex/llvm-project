@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Interp.h"
-#include "ByteCode/Source.h"
 #include "Compiler.h"
 #include "Function.h"
 #include "InterpFrame.h"
@@ -1559,7 +1558,7 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
 }
 
 static void compileFunction(InterpState &S, const Function *Func,
-                            SourceLocation Loc) {
+                            CodePtr OpPC) {
 
   const FunctionDecl *Fn = Func->getDecl();
 
@@ -1569,12 +1568,13 @@ static void compileFunction(InterpState &S, const Function *Func,
   // definition to exist or if the existence of the definition affects the
   // semantics of the program.
   if (!Fn->isDefined() && Fn->isImplicitlyInstantiable() && Fn->isConstexpr() &&
-      S.inConstantContext() && !S.TryConstantInitialization &&
+      S.inConstantContext() && !S.PerformingTrialEvaluation &&
       !S.checkingPotentialConstantExpression()) {
     SemaProxy *SP = S.getASTContext().getSemaProxy();
     if (!SP)
       return;
-    SP->InstantiateFunctionDefinition(Loc, const_cast<FunctionDecl *>(Fn));
+    SP->InstantiateFunctionDefinition(S.Current->getLocation(OpPC),
+                                      const_cast<FunctionDecl *>(Fn));
   }
   Fn = Fn->getDefinition();
   if (!Fn)
@@ -1607,7 +1607,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func, S.Current->getLocation(OpPC));
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -1679,7 +1679,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func, S.Current->getLocation(OpPC));
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
