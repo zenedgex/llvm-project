@@ -187,6 +187,15 @@ Improvements to Clang's diagnostics
     int* p(int *in [[clang::noescape]]) { return in; }
                                                  ^~
 
+- ``[[gnu::warning]]`` and ``[[gnu::error]]`` diagnostics now have notes
+  describing inlining locations. When a function with these attributes is
+  called from an inlined context, Clang can now show which functions were
+  inlined to reach the call. When debug info is available
+  (``-gline-directives-only`` (implicitly enabled at ``-g1``) or higher),
+  accurate source locations are used; otherwise, a heuristic fallback is used
+  with a note suggesting how to enable debug info for better accuracy.
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
