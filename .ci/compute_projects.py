@@ -32,7 +32,7 @@ PROJECT_DEPENDENCIES = {
     "lld": {"llvm"},
     "mlir": {"llvm"},
     "polly": {"llvm"},
-    "offload": {"llvm", "clang", "lld", "flang"},
+    "offload": {"clang", "lld", "flang"},
 }
 
 # This mapping describes the additional projects that should be tested when a
@@ -67,6 +67,7 @@ DEPENDENTS_TO_TEST = {
         "flang",
         "libclc",
         "openmp",
+        "offload",
     },
 }
 
@@ -96,7 +97,6 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
 
 EXCLUDE_LINUX = {
     "cross-project-tests",  # TODO(issues/132796): Tests are failing.
-    #"openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 
 EXCLUDE_WINDOWS = {
