@@ -86,8 +86,8 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
     "openmp": {"openmp"},
-    "offload": {"offload", "openmp"},
-    ".ci": {"compiler-rt", "libc", "flang-rt"},
+    "offload": {"offload"},
+    ".ci": {"compiler-rt", "libc", "flang-rt", "openmp", "offload"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
