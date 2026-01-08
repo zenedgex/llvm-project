@@ -32,6 +32,7 @@ PROJECT_DEPENDENCIES = {
     "lld": {"llvm"},
     "mlir": {"llvm"},
     "polly": {"llvm"},
+    "offload": {"llvm", "clang", "lld", "flang"},
 }
 
 # This mapping describes the additional projects that should be tested when a
@@ -83,6 +84,8 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
+    "openmp": {"openmp"},
+    "offload": {"offload", "openmp"},
     ".ci": {"compiler-rt", "libc", "flang-rt"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
@@ -93,7 +96,7 @@ DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
 
 EXCLUDE_LINUX = {
     "cross-project-tests",  # TODO(issues/132796): Tests are failing.
-    "openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
+    #"openmp",  # https://github.com/google/llvm-premerge-checks/issues/410
 }
 
 EXCLUDE_WINDOWS = {
@@ -106,6 +109,7 @@ EXCLUDE_WINDOWS = {
     "libcxxabi",
     "libunwind",
     "flang-rt",
+    "offload",
 }
 
 # These are projects that we should test if the project itself is changed but
@@ -127,6 +131,7 @@ EXCLUDE_MAC = {
     "libcxx",
     "libcxxabi",
     "libunwind",
+    "offload",
 }
 
 PROJECT_CHECK_TARGETS = {
@@ -151,9 +156,10 @@ PROJECT_CHECK_TARGETS = {
     "openmp": "check-openmp",
     "polly": "check-polly",
     "lit": "check-lit",
+    "offload": "check-offload",
 }
 
-RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt"}
+RUNTIMES = {"libcxx", "libcxxabi", "libunwind", "compiler-rt", "libc", "flang-rt", "openmp", "offload"}
 
 # Meta projects are projects that need explicit handling but do not reside
 # in their own top level folder. To add a meta project, the start of the path
