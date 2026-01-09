@@ -74,8 +74,12 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return isAnyPtr(MRI.getType(Reg), 64);
   case Ptr128:
     return isAnyPtr(MRI.getType(Reg), 128);
+  case V2S16:
+    return MRI.getType(Reg) == LLT::fixed_vector(2, 16);
   case V2S32:
     return MRI.getType(Reg) == LLT::fixed_vector(2, 32);
+  case V3S32:
+    return MRI.getType(Reg) == LLT::fixed_vector(3, 32);
   case V4S32:
     return MRI.getType(Reg) == LLT::fixed_vector(4, 32);
   case B32:
@@ -929,6 +933,21 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_STORE})
       .Any({{S32}, {{}, {Vgpr32, SgprV4S32, Vgpr32, Vgpr32, Sgpr32}}});
+
+  // Buffer atomics: resource descriptor + scalar offset are SGPR, data and
+  // address components are VGPR.
+  //
+  // Operand order (SIInstructions.td BufferAtomicGenericInstruction):
+  //   dst = op vdata, rsrc, vindex, voffset, soffset, offset_imm, cachepolicy,
+  //        idxen_imm
+  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_FADD})
+      .Any({{S32, S32, V4S32, S32, S32, S32},
+            {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{S64, S64, V4S32, S32, S32, S32},
+            {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{V2S16, V2S16, V4S32, S32, S32, S32},
+            {{VgprV2S16},
+             {VgprV2S16, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
   addRulesForGOpcs({G_PTR_ADD})
       .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32, Sgpr32}}})
