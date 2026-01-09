@@ -896,6 +896,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{B64, Ptr32}, {{}, {VgprB64, VgprPtr32}}})
       .Any({{B96, Ptr32}, {{}, {VgprB96, VgprPtr32}}})
       .Any({{B128, Ptr32}, {{}, {VgprB128, VgprPtr32}}});
+
+  // Atomics always operate per-lane; keep both the pointer and the value/result
+  // in VGPRs regardless of uniformity. Use Ptr32/Ptr64 to cover all addrspaces
+  // (e.g. local/region/private for Ptr32, global/flat for Ptr64).
+  addRulesForGOpcs({G_ATOMICRMW_FADD})
+      .Any({{B32, Ptr32, B32}, {{VgprB32}, {VgprPtr32, VgprB32}}})
+      .Any({{B32, Ptr64, B32}, {{VgprB32}, {VgprPtr64, VgprB32}}})
+      .Any({{B64, Ptr32, B64}, {{VgprB64}, {VgprPtr32, VgprB64}}})
+      .Any({{B64, Ptr64, B64}, {{VgprB64}, {VgprPtr64, VgprB64}}})
+      .Any({{V2S16, Ptr32, V2S16}, {{VgprV2S16}, {VgprPtr32, VgprV2S16}}})
+      .Any({{V2S16, Ptr64, V2S16}, {{VgprV2S16}, {VgprPtr64, VgprV2S16}}});
   // clang-format on
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD, G_AMDGPU_BUFFER_LOAD_FORMAT,
