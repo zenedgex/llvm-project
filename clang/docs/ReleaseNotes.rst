@@ -337,8 +337,8 @@ Non-comprehensive list of changes in this release
   allocator-level heap organization strategies. A feature to instrument all
   allocation functions with a token ID can be enabled via the
   ``-fsanitize=alloc-token`` flag.
-
-- A new generic byte swap builtin function ``__builtin_bswapg`` that extends the existing
+ 
+- A new generic byte swap builtin function ``__builtin_bswapg`` that extends the existing 
   __builtin_bswap{16,32,64} function family to support all standard integer types.
 
 - A builtin ``__builtin_infer_alloc_token(<args>, ...)`` is provided to allow
@@ -497,12 +497,12 @@ Improvements to Clang's diagnostics
   Objective-C method and block declarations when calling format functions. It is part
   of the format-nonliteral diagnostic (#GH60718)
 
-- Fixed a crash when enabling ``-fdiagnostics-format=sarif`` and the output
+- Fixed a crash when enabling ``-fdiagnostics-format=sarif`` and the output 
   carries messages like 'In file included from ...' or 'In module ...'.
   Now the include/import locations are written into `sarif.run.result.relatedLocations`.
 
-- Clang now generates a fix-it for C++20 designated initializers when the
-  initializers do not match the declaration order in the structure.
+- Clang now generates a fix-it for C++20 designated initializers when the 
+  initializers do not match the declaration order in the structure. 
 
 Improvements to Clang's time-trace
 ----------------------------------
