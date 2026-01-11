@@ -595,6 +595,16 @@ Changes in existing checks
 - Improved :doc:`misc-header-include-cycle
   <clang-tidy/checks/misc/header-include-cycle>` check performance.
 
+- Improved :doc:`modernize-make-shared
+  <clang-tidy/checks/modernize/make-shared>` check by adding a new option 
+  `MakeSmartPtrType` to specify the corresponding smart pointer type, with a
+  default value of `::std::shared_ptr`.
+
+- Improved :doc:`modernize-make-unique
+  <clang-tidy/checks/modernize/make-unique>` check by adding a new option 
+  `MakeSmartPtrType` to specify the corresponding smart pointer type, with a
+  default value of `::std::unique_ptr`.
+
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check:
 
