@@ -28,6 +28,7 @@ class LangOptions;
 class ASTContext;
 class CharUnits;
 class Expr;
+class FunctionDecl;
 } // namespace clang
 using namespace clang;
 /// Values returned by __builtin_classify_type, chosen to match the values
@@ -81,5 +82,8 @@ uint8_t GFNIMultiplicativeInverse(uint8_t Byte);
 uint8_t GFNIMul(uint8_t AByte, uint8_t BByte);
 uint8_t GFNIAffine(uint8_t XByte, const llvm::APInt &AQword,
                    const llvm::APSInt &Imm, bool Inverse = false);
+
+/// Whether we can instantiate FD during constant evaluation
+bool FunctionDefinitionCanBeLazilyInstantiated(const FunctionDecl *FD);
 
 #endif
