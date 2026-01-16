@@ -2346,6 +2346,8 @@ void AArch64TargetLowering::addTypeForFixedLengthSVE(MVT VT) {
   setOperationAction(ISD::FP_ROUND, VT, Default);
   setOperationAction(ISD::FP_TO_SINT, VT, Default);
   setOperationAction(ISD::FP_TO_UINT, VT, Default);
+  setOperationAction(ISD::FP_TO_SINT_SAT, VT, Default);
+  setOperationAction(ISD::FP_TO_UINT_SAT, VT, Default);
   setOperationAction(ISD::FRINT, VT, Default);
   setOperationAction(ISD::LRINT, VT, Default);
   setOperationAction(ISD::LLRINT, VT, Default);
@@ -4945,6 +4947,7 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   EVT SrcVT = SrcVal.getValueType();
   EVT DstVT = Op.getValueType();
   EVT SatVT = cast<VTSDNode>(Op.getOperand(1))->getVT();
+  EVT DstEVT = Op.getValueType();
 
   uint64_t SrcElementWidth = SrcVT.getScalarSizeInBits();
   uint64_t DstElementWidth = DstVT.getScalarSizeInBits();
@@ -4963,18 +4966,24 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
   // In the absence of FP16 support, promote f16 to f32 and saturate the result.
   SDLoc DL(Op);
   SDValue SrcVal2;
+  bool split = false;
   if ((SrcElementVT == MVT::f16 &&
        (!Subtarget->hasFullFP16() || DstElementWidth > 16)) ||
       SrcElementVT == MVT::bf16) {
     MVT F32VT = MVT::getVectorVT(MVT::f32, SrcVT.getVectorNumElements());
+    MVT F32DstMVT = MVT::getVectorVT(DstVT.getVectorElementType().getSimpleVT(),
+                                     DstVT.getVectorNumElements());
     SrcVal = DAG.getNode(ISD::FP_EXTEND, DL, F32VT, SrcVal);
     // If we are extending to a v8f32, split into two v4f32 to produce legal
     // types.
     if (F32VT.getSizeInBits() > 128) {
       std::tie(SrcVal, SrcVal2) = DAG.SplitVector(SrcVal, DL);
       F32VT = F32VT.getHalfNumVectorElementsVT();
+      F32DstMVT = F32DstMVT.getHalfNumVectorElementsVT();
+      split = true;
     }
     SrcVT = F32VT;
+    DstEVT = F32DstMVT;
     SrcElementVT = MVT::f32;
     SrcElementWidth = 32;
   } else if (SrcElementVT != MVT::f64 && SrcElementVT != MVT::f32 &&
@@ -4990,12 +4999,21 @@ AArch64TargetLowering::LowerVectorFP_TO_INT_SAT(SDValue Op,
     SrcElementVT = MVT::f64;
     SrcElementWidth = 64;
   }
+
+  // Some frint generate bigger vectors when legal size is set to 256
+  if (DstVT.getSizeInBits() > 128 && !split) {
+    std::tie(SrcVal, SrcVal2) = DAG.SplitVector(SrcVal, DL);
+    MVT DstMVT = MVT::getVectorVT(DstVT.getVectorElementType().getSimpleVT(),
+                                  DstVT.getVectorNumElements());
+    DstMVT = DstMVT.getHalfNumVectorElementsVT();
+    DstEVT = DstMVT;
+  }
   // Cases that we can emit directly.
   if (SrcElementWidth == DstElementWidth && SrcElementWidth == SatWidth) {
-    SDValue Res = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal,
+    SDValue Res = DAG.getNode(Op.getOpcode(), DL, DstEVT, SrcVal,
                               DAG.getValueType(DstVT.getScalarType()));
     if (SrcVal2) {
-      SDValue Res2 = DAG.getNode(Op.getOpcode(), DL, DstVT, SrcVal2,
+      SDValue Res2 = DAG.getNode(Op.getOpcode(), DL, DstEVT, SrcVal2,
                                  DAG.getValueType(DstVT.getScalarType()));
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Res, Res2);
     }
@@ -20094,6 +20112,13 @@ tryToReplaceScalarFPConversionWithSVE(SDNode *N, SelectionDAG &DAG,
 
   // Ensure the resulting src/dest vector type is legal.
   if (SrcVecTy == MVT::nxv2i32 || DestVecTy == MVT::nxv2i32)
+    return SDValue();
+
+  // The convert instructions are available also in streaming mode
+  // With exception of FCVTL/FCVTN/FCVTNX wich will then use SVE
+  // converts.
+  if(Subtarget->isSVEorStreamingSVEAvailable())
+  if (Subtarget->isStreaming() || Subtarget->isStreamingCompatible())
     return SDValue();
 
   SDLoc DL(N);

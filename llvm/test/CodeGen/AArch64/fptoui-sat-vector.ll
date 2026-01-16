@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=aarch64 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI,CHECK-CVT,CHECK-GI-CVT
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+fullfp16 -global-isel -global-isel-abort=2 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI,CHECK-FP16,CHECK-GI-FP16
 
+
 ; CHECK-GI:       warning: Instruction selection used fallback path for test_unsigned_v4f32_v4i50
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_unsigned_v4f16_v4i50
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for test_unsigned_v8f16_v8i19
