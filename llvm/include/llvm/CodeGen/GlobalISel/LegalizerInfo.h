@@ -680,6 +680,15 @@ public:
                     LegalityPredicates::typePairAndMemDescInSet(
                         typeIdx(0), typeIdx(1), /*MMOIdx*/ 0, TypesAndMemDesc));
   }
+  LegalizeRuleSet &legalForTypesWithMemDesc(
+      bool Pred, std::initializer_list<LegalityPredicates::TypePairAndMemDesc>
+                     TypesAndMemDesc) {
+    if (!Pred)
+      return *this;
+    return actionIf(LegalizeAction::Legal,
+                    LegalityPredicates::typePairAndMemDescInSet(
+                        typeIdx(0), typeIdx(1), /*MMOIdx*/ 0, TypesAndMemDesc));
+  }
   /// The instruction is legal when type indexes 0 and 1 are both in the given
   /// list. That is, the type pair is in the cartesian product of the list.
   LegalizeRuleSet &legalForCartesianProduct(std::initializer_list<LLT> Types) {
@@ -754,6 +763,12 @@ public:
   /// The instruction is lowered when type indexes 0 and 1 is any type pair in
   /// the given list. Keep type index 0 as the same type.
   LegalizeRuleSet &lowerFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
+    return actionFor(LegalizeAction::Lower, Types);
+  }
+  LegalizeRuleSet &lowerFor(bool Pred,
+                            std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
     return actionFor(LegalizeAction::Lower, Types);
   }
   /// The instruction is lowered when type indexes 0 and 1 is any type pair in
