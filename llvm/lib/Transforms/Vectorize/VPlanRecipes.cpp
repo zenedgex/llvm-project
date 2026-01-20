@@ -458,6 +458,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Reverse:
   case VPInstruction::Unpack:
+  case VPInstruction::NumActiveLanes:
     return 1;
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -606,6 +607,20 @@ Value *VPInstruction::generate(VPTransformState &State) {
                                    {PredTy, ScalarTC->getType()},
                                    {VIVElem0, ScalarTC}, nullptr, Name);
   }
+  case VPInstruction::NumActiveLanes: {
+    Value *Op = State.get(getOperand(0));
+    auto *VecTy = cast<VectorType>(Op->getType());
+    assert(VecTy->getScalarSizeInBits() == 1 &&
+           "NumActiveLanes only implemented for i1 vectors");
+
+    Value *ZExt = Builder.CreateCast(
+        Instruction::ZExt, Op,
+        VectorType::get(Builder.getInt32Ty(), VecTy->getElementCount()));
+    Value *Count =
+        Builder.CreateUnaryIntrinsic(Intrinsic::vector_reduce_add, ZExt);
+    return Builder.CreateCast(Instruction::ZExt, Count, Builder.getInt64Ty(),
+                              "num.active.lanes");
+  }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     // Generate code to combine the previous and current values in vector v3.
     //
@@ -627,8 +642,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
   }
   case VPInstruction::CalculateTripCountMinusVF: {
     unsigned UF = getParent()->getPlan()->getUF();
+    assert(UF == 1 || !State.ClampedVF && "Expected UF == 1 with ClampedVF");
+    Value *ClampedVF = State.getRTClampedVF();
     Value *ScalarTC = State.get(getOperand(0), VPLane(0));
-    Value *Step = createStepForVF(Builder, ScalarTC->getType(), State.VF, UF);
+    Value *Step =
+        ClampedVF ? ClampedVF
+                  : createStepForVF(Builder, ScalarTC->getType(), State.VF, UF);
     Value *Sub = Builder.CreateSub(ScalarTC, Step);
     Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
     Value *Zero = ConstantInt::getNullValue(ScalarTC->getType());
@@ -654,9 +673,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     unsigned Part = getUnrollPart(*this);
     auto *IV = State.get(getOperand(0), VPLane(0));
     assert(Part != 0 && "Must have a positive part");
+    Value *ClampedVF = State.getRTClampedVF();
+    assert(!ClampedVF || Part == 1 && "Expected Part == 1 with ClampedVF");
     // The canonical IV is incremented by the vectorization factor (num of
     // SIMD elements) times the unroll part.
-    Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
+    Value *Step = ClampedVF
+                      ? ClampedVF
+                      : createStepForVF(Builder, IV->getType(), State.VF, Part);
     return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
                              hasNoSignedWrap());
   }
@@ -1265,7 +1288,8 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
          getOpcode() == VPInstruction::ExtractLastActive ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
-         getOpcode() == VPInstruction::AnyOf;
+         getOpcode() == VPInstruction::AnyOf ||
+         getOpcode() == VPInstruction::NumActiveLanes;
 }
 
 bool VPInstruction::isSingleScalar() const {
@@ -1534,6 +1558,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractLastActive:
     O << "extract-last-active";
+    break;
+  case VPInstruction::NumActiveLanes:
+    O << "num-active-lanes";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());

@@ -662,6 +662,10 @@ private:
   void attachRuntimeChecks(VPlan &Plan, GeneratedRTChecks &RTChecks,
                            bool HasBranchWeights) const;
 
+  VPValue *materializeAliasMask(VPlan &Plan,
+                                ArrayRef<PointerDiffInfo> DiffChecks,
+                                bool HasBranchWeights);
+
 #ifndef NDEBUG
   /// \return The most profitable vectorization factor for the available VPlans
   /// and the cost of that VF.
