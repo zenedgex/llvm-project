@@ -30,7 +30,6 @@ namespace llvm {
 
 class GlobalValue;
 class Module;
-class DiagnosticInfo;
 
 class ModuleSymbolTable {
 public:
@@ -46,8 +45,7 @@ private:
 
 public:
   ArrayRef<Symbol> symbols() const { return SymTab; }
-  LLVM_ABI void addModule(Module *M, StringRef CPU = "",
-                          StringRef Features = "");
+  LLVM_ABI void addModule(Module *M);
 
   LLVM_ABI void printSymbolName(raw_ostream &OS, Symbol S) const;
   LLVM_ABI uint32_t getSymbolFlags(Symbol S) const;
@@ -57,45 +55,29 @@ public:
   ///
   /// For each found symbol, call \p AsmSymbol with the name of the symbol found
   /// and the associated flags.
-  ///
-  /// The function attempts to use global-asm-symbols module flag if
-  /// it is present. Otherwise it parses assembly with the provided \p
-  /// CPU and \p Features and calls \p DiagHandler for any
-  /// diagnostics.
-  ///
-  /// If \p DiagHandler is not provided, the function calls
-  /// LLVMContext::diagnose() instead.
   LLVM_ABI static void CollectAsmSymbols(
       const Module &M,
-      function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol,
-      function_ref<void(const DiagnosticInfo &DI)> DiagHandler = nullptr,
-      StringRef CPU = "", StringRef Features = "");
+      function_ref<void(StringRef, object::BasicSymbolRef::Flags)> AsmSymbol);
 
   /// Parse inline ASM and collect the symvers directives that are defined in
   /// the current module.
   ///
   /// For each found symbol, call \p AsmSymver with the name of the symbol and
   /// its alias.
-  ///
-  /// The function attempts to use global-asm-symvers module flag if
-  /// it is present. Otherwise it parses assembly with the provided \p
-  /// CPU and \p Features and calls \p DiagHandler for any
-  /// diagnostics.
-  ///
-  /// If \p DiagHandler is not provided, the function calls
-  /// LLVMContext::diagnose() instead.
+  LLVM_ABI static void
+  CollectAsmSymvers(const Module &M,
+                    function_ref<void(StringRef, StringRef)> AsmSymver);
 
-  LLVM_ABI static void CollectAsmSymvers(
-      const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver,
-      function_ref<void(const DiagnosticInfo &DI)> DiagHandler = nullptr,
-      StringRef CPU = "", StringRef Features = "");
-
-  /// Emit module flags for symbols and symvers defined in global inline
-  /// assembly. This allows LLVM IR tools to build a symbol table for an
-  /// IR module without knowing exact CPU and Features required to parse
+  /// Emit module flags for symbols and symvers defined in global
+  /// inline assembly. If these flags are present, CollectAsmSymbols
+  /// and CollectAsmSymvers will use them instead of trying to parse
+  /// assembly again.
+  ///
+  /// This allows LLVM IR tools to build a symbol table for an IR
+  /// module without knowing exact CPU and Features required to parse
   /// its global inline assembly.
-  LLVM_ABI static bool EmitModuleFlags(Module &M, StringRef CPU = "",
-                                       StringRef Features = "");
+  LLVM_ABI static bool EmitModuleFlags(Module &M, StringRef CPU,
+                                       StringRef Features);
 };
 
 } // end namespace llvm

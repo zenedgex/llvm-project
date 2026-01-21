@@ -50,8 +50,7 @@
 using namespace llvm;
 using namespace object;
 
-void ModuleSymbolTable::addModule(Module *M, StringRef CPU,
-                                  StringRef Features) {
+void ModuleSymbolTable::addModule(Module *M) {
   if (FirstMod)
     assert(FirstMod->getTargetTriple() == M->getTargetTriple());
   else
@@ -60,13 +59,10 @@ void ModuleSymbolTable::addModule(Module *M, StringRef CPU,
   for (GlobalValue &GV : M->global_values())
     SymTab.push_back(&GV);
 
-  CollectAsmSymbols(
-      *M,
-      [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-        SymTab.push_back(new (AsmSymbols.Allocate())
-                             AsmSymbol(std::string(Name), Flags));
-      },
-      /*DiagHandler=*/nullptr, CPU, Features);
+  CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
+    SymTab.push_back(new (AsmSymbols.Allocate())
+                         AsmSymbol(std::string(Name), Flags));
+  });
 }
 
 static void initializeRecordStreamer(
@@ -200,9 +196,7 @@ addSymbols(RecordStreamer &Streamer,
 
 void ModuleSymbolTable::CollectAsmSymbols(
     const Module &M,
-    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol,
-    function_ref<void(const DiagnosticInfo &DI)> DiagHandler, StringRef CPU,
-    StringRef Features) {
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
 
   MDTuple *SymbolsMD =
       dyn_cast_if_present<MDTuple>(M.getModuleFlag("global-asm-symbols"));
@@ -216,13 +210,14 @@ void ModuleSymbolTable::CollectAsmSymbols(
       AsmSymbol(Name->getString(),
                 static_cast<BasicSymbolRef::Flags>(Flags->getZExtValue()));
     }
+    addSpecialSymbols(M, AsmSymbol);
     return;
   }
 
   initializeRecordStreamer(
-      M, CPU, Features,
+      M, /*CPU=*/"", /*Features=*/"",
       [&](RecordStreamer &Streamer) { addSymbols(Streamer, AsmSymbol); },
-      DiagHandler);
+      /*DiagHandler=*/nullptr);
 
   addSpecialSymbols(M, AsmSymbol);
 }
@@ -235,9 +230,7 @@ static void addSymvers(RecordStreamer &Streamer,
 }
 
 void ModuleSymbolTable::CollectAsmSymvers(
-    const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver,
-    function_ref<void(const DiagnosticInfo &DI)> DiagHandler, StringRef CPU,
-    StringRef Features) {
+    const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver) {
 
   MDTuple *SymversMD =
       dyn_cast_if_present<MDTuple>(M.getModuleFlag("global-asm-symvers"));
@@ -254,9 +247,9 @@ void ModuleSymbolTable::CollectAsmSymvers(
   }
 
   initializeRecordStreamer(
-      M, CPU, Features,
+      M, /*CPU=*/"", /*Features=*/"",
       [&](RecordStreamer &Streamer) { addSymvers(Streamer, AsmSymver); },
-      DiagHandler);
+      /*DiagHandler=*/nullptr);
 }
 
 bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
@@ -269,9 +262,9 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
     // Ignore diagnostics from the assembly parser.
     //
     // Errors in assembly mean that we cannot build a symbol table
-    // from it. However, we do not diagnose them here in Clang,
-    // because we don't know if the Module is ever going to actually
-    // reach CodeGen where this would matter.
+    // from it. However, we do not diagnose them here, because we
+    // don't know if the Module is ever going to actually reach
+    // CodeGen where this would matter.
     if (DI.getSeverity() == llvm::DS_Error)
       HaveErrors = true;
   };
@@ -294,15 +287,15 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
   auto AsmSymver = [&](StringRef Name, StringRef Alias) {
     auto ItNew = SymversMap.try_emplace(Name);
     SmallVector<llvm::Metadata *, 2> &Aliases = ItNew.first->second;
-    if (ItNew.second) {
-      // If it is a new list, insert the primary name at the
-      // front.
+
+    // If it is a new list, insert the primary name at the front.
+    if (ItNew.second)
       Aliases.push_back(llvm::MDString::get(Ctx, Name));
-    }
+
     Aliases.push_back(llvm::MDString::get(Ctx, Alias));
   };
 
-  // Parse global inline assembly and collect all symbols and symvers
+  // Parse global inline assembly and collect all symbols and symvers.
   initializeRecordStreamer(
       M, CPU, Features,
       [&](RecordStreamer &Streamer) {
@@ -311,11 +304,11 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
       },
       DiagHandler);
 
-  if (HaveErrors) {
+  if (HaveErrors)
     return false;
-  }
 
-  addSpecialSymbols(M, AsmSymbol);
+  // Emit a symbol table as module flags, so they can be traversed
+  // later with CollectAsmSymbols and CollectAsmSymvers.
 
   if (!Symbols.empty()) {
     M.addModuleFlag(llvm::Module::Append, "global-asm-symbols",
