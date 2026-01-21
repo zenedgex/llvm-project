@@ -170,12 +170,10 @@ addSymbols(RecordStreamer &Streamer,
            function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
   Streamer.flushSymverDirectives();
 
-  for (auto &KV : Streamer) {
-    StringRef Key = KV.first();
-    RecordStreamer::State Value = KV.second;
+  for (const auto &[Name, State] : Streamer) {
     // FIXME: For now we just assume that all asm symbols are executable.
     uint32_t Res = BasicSymbolRef::SF_Executable;
-    switch (Value) {
+    switch (State) {
     case RecordStreamer::NeverSeen:
       llvm_unreachable("NeverSeen should have been replaced earlier");
     case RecordStreamer::DefinedGlobal:
@@ -196,7 +194,7 @@ addSymbols(RecordStreamer &Streamer,
       Res |= BasicSymbolRef::SF_Weak;
       Res |= BasicSymbolRef::SF_Undefined;
     }
-    AsmSymbol(Key, BasicSymbolRef::Flags(Res));
+    AsmSymbol(Name, BasicSymbolRef::Flags(Res));
   }
 }
 
@@ -231,9 +229,9 @@ void ModuleSymbolTable::CollectAsmSymbols(
 
 static void addSymvers(RecordStreamer &Streamer,
                        function_ref<void(StringRef, StringRef)> AsmSymver) {
-  for (auto &KV : Streamer.symverAliases())
-    for (auto &Alias : KV.second)
-      AsmSymver(KV.first->getName(), Alias);
+  for (const auto &[Name, Aliases] : Streamer.symverAliases())
+    for (StringRef Alias : Aliases)
+      AsmSymver(Name->getName(), Alias);
 }
 
 void ModuleSymbolTable::CollectAsmSymvers(
@@ -248,7 +246,7 @@ void ModuleSymbolTable::CollectAsmSymvers(
     for (const Metadata *MD : SymversMD->operands()) {
       const MDTuple *SymverMD = cast<MDTuple>(MD);
       StringRef Name = cast<MDString>(SymverMD->getOperand(0))->getString();
-      for (unsigned i = 1; i < SymverMD->getNumOperands(); ++i) {
+      for (size_t i = 1, End = SymverMD->getNumOperands(); i < End; ++i) {
         AsmSymver(Name, cast<MDString>(SymverMD->getOperand(i))->getString());
       }
     }
@@ -274,9 +272,8 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
     // from it. However, we do not diagnose them here in Clang,
     // because we don't know if the Module is ever going to actually
     // reach CodeGen where this would matter.
-    if (DI.getSeverity() == llvm::DS_Error) {
+    if (DI.getSeverity() == llvm::DS_Error)
       HaveErrors = true;
-    }
   };
 
   // Build global-asm-symbols as a list of pairs (name, flags bitmask).
@@ -328,6 +325,7 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
 
   if (!SymversMap.empty()) {
     SmallVector<llvm::Metadata *, 16> Symvers;
+    Symvers.reserve(SymversMap.size());
     for (const auto &KV : SymversMap) {
       Symvers.push_back(llvm::MDNode::get(Ctx, KV.second));
     }
