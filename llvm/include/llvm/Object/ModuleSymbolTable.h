@@ -89,6 +89,13 @@ public:
       const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver,
       function_ref<void(const DiagnosticInfo &DI)> DiagHandler = nullptr,
       StringRef CPU = "", StringRef Features = "");
+
+  /// Emit module flags for symbols and symvers defined in global inline
+  /// assembly. This allows LLVM IR tools to build a symbol table for an
+  /// IR module without knowing exact CPU and Features required to parse
+  /// its global inline assembly.
+  LLVM_ABI static bool EmitModuleFlags(Module &M, StringRef CPU = "",
+                                       StringRef Features = "");
 };
 
 } // end namespace llvm

@@ -147,6 +147,59 @@ static void initializeRecordStreamer(
   Init(Streamer);
 }
 
+static void addSpecialSymbols(
+    const Module &M,
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
+  // In ELF, object code generated for x86-32 and some code models of x86-64 may
+  // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the
+  // IR. Record it like inline asm symbols.
+  Triple TT(M.getTargetTriple());
+  if (!TT.isOSBinFormatELF() || !TT.isX86())
+    return;
+  auto CM = M.getCodeModel();
+  if (TT.getArch() == Triple::x86 || CM == CodeModel::Medium ||
+      CM == CodeModel::Large) {
+    AsmSymbol("_GLOBAL_OFFSET_TABLE_",
+              BasicSymbolRef::Flags(BasicSymbolRef::SF_Undefined |
+                                    BasicSymbolRef::SF_Global));
+  }
+}
+
+static void
+addSymbols(RecordStreamer &Streamer,
+           function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
+  Streamer.flushSymverDirectives();
+
+  for (auto &KV : Streamer) {
+    StringRef Key = KV.first();
+    RecordStreamer::State Value = KV.second;
+    // FIXME: For now we just assume that all asm symbols are executable.
+    uint32_t Res = BasicSymbolRef::SF_Executable;
+    switch (Value) {
+    case RecordStreamer::NeverSeen:
+      llvm_unreachable("NeverSeen should have been replaced earlier");
+    case RecordStreamer::DefinedGlobal:
+      Res |= BasicSymbolRef::SF_Global;
+      break;
+    case RecordStreamer::Defined:
+      break;
+    case RecordStreamer::Global:
+    case RecordStreamer::Used:
+      Res |= BasicSymbolRef::SF_Undefined;
+      Res |= BasicSymbolRef::SF_Global;
+      break;
+    case RecordStreamer::DefinedWeak:
+      Res |= BasicSymbolRef::SF_Weak;
+      Res |= BasicSymbolRef::SF_Global;
+      break;
+    case RecordStreamer::UndefinedWeak:
+      Res |= BasicSymbolRef::SF_Weak;
+      Res |= BasicSymbolRef::SF_Undefined;
+    }
+    AsmSymbol(Key, BasicSymbolRef::Flags(Res));
+  }
+}
+
 void ModuleSymbolTable::CollectAsmSymbols(
     const Module &M,
     function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol,
@@ -170,53 +223,17 @@ void ModuleSymbolTable::CollectAsmSymbols(
 
   initializeRecordStreamer(
       M, CPU, Features,
-      [&](RecordStreamer &Streamer) {
-        Streamer.flushSymverDirectives();
-
-        for (auto &KV : Streamer) {
-          StringRef Key = KV.first();
-          RecordStreamer::State Value = KV.second;
-          // FIXME: For now we just assume that all asm symbols are executable.
-          uint32_t Res = BasicSymbolRef::SF_Executable;
-          switch (Value) {
-          case RecordStreamer::NeverSeen:
-            llvm_unreachable("NeverSeen should have been replaced earlier");
-          case RecordStreamer::DefinedGlobal:
-            Res |= BasicSymbolRef::SF_Global;
-            break;
-          case RecordStreamer::Defined:
-            break;
-          case RecordStreamer::Global:
-          case RecordStreamer::Used:
-            Res |= BasicSymbolRef::SF_Undefined;
-            Res |= BasicSymbolRef::SF_Global;
-            break;
-          case RecordStreamer::DefinedWeak:
-            Res |= BasicSymbolRef::SF_Weak;
-            Res |= BasicSymbolRef::SF_Global;
-            break;
-          case RecordStreamer::UndefinedWeak:
-            Res |= BasicSymbolRef::SF_Weak;
-            Res |= BasicSymbolRef::SF_Undefined;
-          }
-          AsmSymbol(Key, BasicSymbolRef::Flags(Res));
-        }
-      },
+      [&](RecordStreamer &Streamer) { addSymbols(Streamer, AsmSymbol); },
       DiagHandler);
 
-  // In ELF, object code generated for x86-32 and some code models of x86-64 may
-  // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the
-  // IR. Record it like inline asm symbols.
-  Triple TT(M.getTargetTriple());
-  if (!TT.isOSBinFormatELF() || !TT.isX86())
-    return;
-  auto CM = M.getCodeModel();
-  if (TT.getArch() == Triple::x86 || CM == CodeModel::Medium ||
-      CM == CodeModel::Large) {
-    AsmSymbol("_GLOBAL_OFFSET_TABLE_",
-              BasicSymbolRef::Flags(BasicSymbolRef::SF_Undefined |
-                                    BasicSymbolRef::SF_Global));
-  }
+  addSpecialSymbols(M, AsmSymbol);
+}
+
+static void addSymvers(RecordStreamer &Streamer,
+                       function_ref<void(StringRef, StringRef)> AsmSymver) {
+  for (auto &KV : Streamer.symverAliases())
+    for (auto &Alias : KV.second)
+      AsmSymver(KV.first->getName(), Alias);
 }
 
 void ModuleSymbolTable::CollectAsmSymvers(
@@ -240,12 +257,87 @@ void ModuleSymbolTable::CollectAsmSymvers(
 
   initializeRecordStreamer(
       M, CPU, Features,
+      [&](RecordStreamer &Streamer) { addSymvers(Streamer, AsmSymver); },
+      DiagHandler);
+}
+
+bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
+                                        StringRef Features) {
+  bool Changed = false;
+  llvm::LLVMContext &Ctx = M.getContext();
+
+  bool HaveErrors = false;
+  auto DiagHandler = [&](const llvm::DiagnosticInfo &DI) {
+    // Ignore diagnostics from the assembly parser.
+    //
+    // Errors in assembly mean that we cannot build a symbol table
+    // from it. However, we do not diagnose them here in Clang,
+    // because we don't know if the Module is ever going to actually
+    // reach CodeGen where this would matter.
+    if (DI.getSeverity() == llvm::DS_Error) {
+      HaveErrors = true;
+    }
+  };
+
+  // Build global-asm-symbols as a list of pairs (name, flags bitmask).
+  SmallVector<llvm::Metadata *, 16> Symbols;
+
+  auto AsmSymbol = [&](StringRef Name,
+                       llvm::object::BasicSymbolRef::Flags Flags) {
+    Symbols.push_back(llvm::MDNode::get(
+        Ctx, {llvm::MDString::get(Ctx, Name),
+              llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                  llvm::Type::getInt32Ty(Ctx), Flags))}));
+  };
+
+  // Build global-asm-symvers as a list of lists (name, followed by all
+  // aliases).
+  llvm::MapVector<StringRef, SmallVector<llvm::Metadata *, 2>> SymversMap;
+
+  auto AsmSymver = [&](StringRef Name, StringRef Alias) {
+    auto ItNew = SymversMap.try_emplace(Name);
+    SmallVector<llvm::Metadata *, 2> &Aliases = ItNew.first->second;
+    if (ItNew.second) {
+      // If it is a new list, insert the primary name at the
+      // front.
+      Aliases.push_back(llvm::MDString::get(Ctx, Name));
+    }
+    Aliases.push_back(llvm::MDString::get(Ctx, Alias));
+  };
+
+  // Parse global inline assembly and collect all symbols and symvers
+  initializeRecordStreamer(
+      M, CPU, Features,
       [&](RecordStreamer &Streamer) {
-        for (auto &KV : Streamer.symverAliases())
-          for (auto &Alias : KV.second)
-            AsmSymver(KV.first->getName(), Alias);
+        addSymvers(Streamer, AsmSymver);
+        addSymbols(Streamer, AsmSymbol);
       },
       DiagHandler);
+
+  if (HaveErrors) {
+    return false;
+  }
+
+  addSpecialSymbols(M, AsmSymbol);
+
+  if (!Symbols.empty()) {
+    M.addModuleFlag(llvm::Module::Append, "global-asm-symbols",
+                    llvm::MDNode::get(Ctx, Symbols));
+    Changed = true;
+  }
+
+  if (!SymversMap.empty()) {
+    SmallVector<llvm::Metadata *, 16> Symvers;
+    for (const auto &KV : SymversMap) {
+      Symvers.push_back(llvm::MDNode::get(Ctx, KV.second));
+    }
+
+    M.addModuleFlag(llvm::Module::Append, "global-asm-symvers",
+                    llvm::MDNode::get(Ctx, Symvers));
+    Changed = true;
+  }
+
+  return Changed;
 }
 
 void ModuleSymbolTable::printSymbolName(raw_ostream &OS, Symbol S) const {

@@ -953,76 +953,6 @@ static bool isStackProtectorOn(const LangOptions &LangOpts,
   return LangOpts.getStackProtector() == Mode;
 }
 
-// Emit module flags for symbols and symvers defined in global inline
-// assembly. This allows LLVM IR tools to build a symbol table for an
-// IR module without knowing exact CPU and Features required to parse
-// its global inline assembly.
-static void emitGlobalAsmSymbols(llvm::Module &M, StringRef CPU,
-                                 StringRef Features) {
-  llvm::LLVMContext &Ctx = M.getContext();
-  bool HaveErrors = false;
-
-  auto DiagHandler = [&](const llvm::DiagnosticInfo &DI) {
-    // Ignore diagnostics from the assembly parser.
-    //
-    // Errors in assembly mean that we cannot build a symbol table
-    // from it. However, we do not diagnose them here in Clang,
-    // because we don't know if the Module is ever going to actually
-    // reach CodeGen where this would matter.
-    if (DI.getSeverity() == llvm::DS_Error) {
-      HaveErrors = true;
-    }
-  };
-
-  // Build global-asm-symbols as a list of pairs (name, flags bitmask).
-  SmallVector<llvm::Metadata *, 16> Symbols;
-  llvm::ModuleSymbolTable::CollectAsmSymbols(
-      M,
-      [&](StringRef Name, llvm::object::BasicSymbolRef::Flags Flags) {
-        Symbols.push_back(llvm::MDNode::get(
-            Ctx, {llvm::MDString::get(Ctx, Name),
-                  llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-                      llvm::Type::getInt32Ty(Ctx), Flags))}));
-      },
-      DiagHandler, CPU, Features);
-
-  if (Symbols.empty() || HaveErrors) {
-    return;
-  }
-
-  M.addModuleFlag(llvm::Module::Append, "global-asm-symbols",
-                  llvm::MDNode::get(Ctx, Symbols));
-
-  // Build global-asm-symvers as a list of lists (name, followed by all
-  // aliases).
-  llvm::MapVector<StringRef, SmallVector<llvm::Metadata *, 2>> SymversMap;
-  llvm::ModuleSymbolTable::CollectAsmSymvers(
-      M,
-      [&](StringRef Name, StringRef Alias) {
-        auto ItNew = SymversMap.try_emplace(Name);
-        SmallVector<llvm::Metadata *, 2> &Aliases = ItNew.first->second;
-        if (ItNew.second) {
-          // If it is a new list, insert the primary name at the
-          // front.
-          Aliases.push_back(llvm::MDString::get(Ctx, Name));
-        }
-        Aliases.push_back(llvm::MDString::get(Ctx, Alias));
-      },
-      DiagHandler, CPU, Features);
-
-  if (SymversMap.empty() || HaveErrors) {
-    return;
-  }
-
-  SmallVector<llvm::Metadata *, 16> Symvers;
-  for (const auto &KV : SymversMap) {
-    Symvers.push_back(llvm::MDNode::get(Ctx, KV.second));
-  }
-
-  M.addModuleFlag(llvm::Module::Append, "global-asm-symvers",
-                  llvm::MDNode::get(Ctx, Symvers));
-}
-
 void CodeGenModule::Release() {
   Module *Primary = getContext().getCurrentNamedModule();
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
@@ -1641,8 +1571,9 @@ void CodeGenModule::Release() {
 
   // Emit module flags for global inline assembly symbols.
   if (!TheModule.getModuleInlineAsm().empty()) {
-    emitGlobalAsmSymbols(TheModule, getTarget().getTargetOpts().CPU,
-                         llvm::join(getTarget().getTargetOpts().Features, ","));
+    llvm::ModuleSymbolTable::EmitModuleFlags(
+        TheModule, getTarget().getTargetOpts().CPU,
+        llvm::join(getTarget().getTargetOpts().Features, ","));
   }
 
   getTargetCodeGenInfo().emitTargetGlobals(*this);
