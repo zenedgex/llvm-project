@@ -4479,34 +4479,7 @@ LogicalResult WorkdistributeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Declare simd [7.7]
-//===----------------------------------------------------------------------===//
-
-LogicalResult DeclareSimdOp::verify() {
-  // Must be nested inside a function-like op
-  auto func =
-      dyn_cast_if_present<mlir::FunctionOpInterface>((*this)->getParentOp());
-  if (!func)
-    return emitOpError() << "must be nested inside a function";
-
-  if (getInbranch() && getNotinbranch())
-    return emitOpError("cannot have both 'inbranch' and 'notinbranch'");
-
-  return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
-}
-
-void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          const DeclareSimdOperands &clauses) {
-  MLIRContext *ctx = odsBuilder.getContext();
-  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
-                       makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
-                       clauses.linearVars, clauses.linearStepVars,
-                       clauses.linearVarTypes, clauses.notinbranch,
-                       clauses.simdlen, clauses.uniformVars);
-}
-
-//===----------------------------------------------------------------------===//
-// Parser and printer for Uniform Clause
+// Parser, printer, and verifier for Uniform Clause
 //===----------------------------------------------------------------------===//
 
 /// uniform ::= `uniform` `(` uniform-list `)`
@@ -4532,6 +4505,33 @@ static void printUniformClause(OpAsmPrinter &p, Operation *op,
       p << ", ";
     p << uniformVars[i] << " : " << uniformTypes[i];
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Declare simd [7.7]
+//===----------------------------------------------------------------------===//
+
+LogicalResult DeclareSimdOp::verify() {
+  // Must be nested inside a function-like op
+  auto func =
+      dyn_cast_if_present<mlir::FunctionOpInterface>((*this)->getParentOp());
+  if (!func)
+    return emitOpError() << "must be nested inside a function";
+
+  if (getInbranch() && getNotinbranch())
+    return emitOpError("cannot have both 'inbranch' and 'notinbranch'");
+
+  return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
+}
+
+void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                          const DeclareSimdOperands &clauses) {
+  MLIRContext *ctx = odsBuilder.getContext();
+  DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
+                       makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
+                       clauses.linearVars, clauses.linearStepVars,
+                       clauses.linearVarTypes, clauses.notinbranch,
+                       clauses.simdlen, clauses.uniformVars);
 }
 
 #define GET_ATTRDEF_CLASSES
