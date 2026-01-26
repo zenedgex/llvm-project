@@ -183,7 +183,6 @@ namespace Intrinsic {
       AArch64Svcount,
       ArgumentTypeConstraint, // For AnyTypeOf - marks constrained argument
                               // types.
-      ArgumentTypeExclusion,  // For NoneTypeOf - marks excluded argument types.
     } Kind;
 
     union {
@@ -241,12 +240,6 @@ namespace Intrinsic {
       return Argument_NumConstraints;
     }
 
-    // For ArgumentTypeExclusion: get number of excluded types.
-    unsigned getArgumentNumExclusions() const {
-      assert(Kind == ArgumentTypeExclusion);
-      return Argument_NumConstraints;
-    }
-
     static IITDescriptor get(IITDescriptorKind K, unsigned Field) {
       IITDescriptor Result = { K, { Field } };
       return Result;
@@ -283,9 +276,12 @@ namespace Intrinsic {
   ///
   /// Returns false if the given type matches with the constraints, true
   /// otherwise.
-  LLVM_ABI MatchIntrinsicTypesResult
-  matchIntrinsicSignature(FunctionType *FTy, ArrayRef<IITDescriptor> &Infos,
-                          SmallVectorImpl<Type *> &ArgTys);
+  ///
+  /// If ErrMsg is non-null, detailed diagnostic message is produced
+  /// on type constraint violations.
+  LLVM_ABI MatchIntrinsicTypesResult matchIntrinsicSignature(
+      FunctionType *FTy, ArrayRef<IITDescriptor> &Infos,
+      SmallVectorImpl<Type *> &ArgTys, std::string *ErrMsg = nullptr);
 
   /// Verify if the intrinsic has variable arguments. This method is intended to
   /// be called after all the fixed arguments have been matched first.
@@ -294,22 +290,23 @@ namespace Intrinsic {
   LLVM_ABI bool matchIntrinsicVarArg(bool isVarArg,
                                      ArrayRef<IITDescriptor> &Infos);
 
-  /// Verify type constraints for AnyTypeOf constrained intrinsics.
-  LLVM_ABI bool verifyIntrinsicTypeConstraints(ID id, FunctionType *FTy,
-                                               std::string &ErrMsg);
-
   /// Gets the type arguments of an intrinsic call by matching type contraints
   /// specified by the .td file. The overloaded types are pushed into the
   /// AgTys vector.
   ///
   /// Returns false if the given ID and function type combination is not a
   /// valid intrinsic call.
+  ///
+  /// If ErrMsg is non-null, detailed diagnostic message is produced
+  /// on type constraint violations.
   LLVM_ABI bool getIntrinsicSignature(Intrinsic::ID, FunctionType *FT,
-                                      SmallVectorImpl<Type *> &ArgTys);
+                                      SmallVectorImpl<Type *> &ArgTys,
+                                      std::string *ErrMsg = nullptr);
 
   /// Same as previous, but accepts a Function instead of ID and FunctionType.
   LLVM_ABI bool getIntrinsicSignature(Function *F,
-                                      SmallVectorImpl<Type *> &ArgTys);
+                                      SmallVectorImpl<Type *> &ArgTys,
+                                      std::string *ErrMsg = nullptr);
 
   // Checks if the intrinsic name matches with its signature and if not
   // returns the declaration with the same signature and remangled name.
