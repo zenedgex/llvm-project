@@ -3630,8 +3630,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     break;
   }
 
-  case Builtin::BI__builtin_reduce_addf:
-  case Builtin::BI__builtin_ordered_reduce_addf: {
+  case Builtin::BI__builtin_reduce_fadd:
+  case Builtin::BI__builtin_ordered_reduce_fadd: {
     if (checkArgCountRange(TheCall, 1, 2))
       return ExprError();
 
