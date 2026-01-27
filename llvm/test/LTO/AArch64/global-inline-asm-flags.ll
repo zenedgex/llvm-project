@@ -1,7 +1,9 @@
 ; RUN: llvm-as %s -o %t1.bc
 ; RUN: llvm-as %p/Inputs/global-inline-asm-flags.ll -o %t2.bc
+
 ; RUN: llvm-lto -save-merged-module -filetype=asm -mattr=+pauth %t1.bc %t2.bc -o %t3
 ; RUN: llvm-dis %t3.merged.bc -o - | FileCheck %s
+
 ; RUN: llvm-lto2 run -save-temps -mattr=+pauth -filetype=asm -o %t4.s %t1.bc %t2.bc \
 ; RUN:   -r=%t1.bc,baz,p \
 ; RUN:   -r=%t1.bc,baz@VER,p \
@@ -13,10 +15,28 @@
 ; RUN:   -r=%t2.bc,foo@VER,p
 ; RUN: llvm-dis %t4.s.0.5.precodegen.bc -o - | FileCheck %s
 
-; Note that -mattr=+pauth for llvm-lto is still required, because it
-; runs full CodeGen at the end. Symbols and Symvers are still
-; extracted from metadata.
+; Note that -mattr=+pauth option for llvm-lto and llvm-lto2 is still
+; required, because LTO runs full CodeGen at the end. Symbols and
+; Symvers are still extracted from metadata.
 
+; RUN: llvm-nm %t1.bc | FileCheck %s --check-prefix NM1
+; RUN: llvm-nm %t2.bc | FileCheck %s --check-prefix NM2
+; RUN: llvm-nm %t3.merged.bc | FileCheck %s --check-prefixes NM1,NM2
+; RUN: llvm-nm %t4.s.0.5.precodegen.bc | FileCheck %s --check-prefixes NM1,NM2
+
+; Symbols of the first module
+; NM1-DAG: U baz
+; NM1-DAG: U baz@VER
+; NM1-DAG: U foo@LINKEDVER
+
+; Symbols of the second module
+; NM2-DAG: U bar
+; NM2-DAG: U bar@VER
+; NM2-DAG: U foo
+; NM2-DAG: U foo@ANOTHERVER
+; NM2-DAG: U foo@VER
+
+; IR with two modules linked
 ; CHECK: module asm ".text"
 ; CHECK: module asm ".balign 16"
 ; CHECK: module asm ".globl baz"
