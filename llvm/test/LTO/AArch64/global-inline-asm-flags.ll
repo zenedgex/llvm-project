@@ -2,6 +2,16 @@
 ; RUN: llvm-as %p/Inputs/global-inline-asm-flags.ll -o %t2.bc
 ; RUN: llvm-lto -save-merged-module -filetype=asm -mattr=+pauth %t1.bc %t2.bc -o %t3
 ; RUN: llvm-dis %t3.merged.bc -o - | FileCheck %s
+; RUN: llvm-lto2 run -save-temps -mattr=+pauth -filetype=asm -o %t4.s %t1.bc %t2.bc \
+; RUN:   -r=%t1.bc,baz,p \
+; RUN:   -r=%t1.bc,baz@VER,p \
+; RUN:   -r=%t1.bc,foo@LINKEDVER,p \
+; RUN:   -r=%t2.bc,bar,p \
+; RUN:   -r=%t2.bc,bar@VER,p \
+; RUN:   -r=%t2.bc,foo@ANOTHERVER,p \
+; RUN:   -r=%t2.bc,foo,p \
+; RUN:   -r=%t2.bc,foo@VER,p
+; RUN: llvm-dis %t4.s.0.5.precodegen.bc -o - | FileCheck %s
 
 ; Note that -mattr=+pauth for llvm-lto is still required, because it
 ; runs full CodeGen at the end. Symbols and Symvers are still
@@ -45,6 +55,9 @@
 ; CHECK: ![[VFOO1]] = !{!"foo", !"foo@LINKEDVER"}
 ; CHECK: ![[VFOO2]] = !{!"foo", !"foo@VER", !"foo@ANOTHERVER"}
 ; CHECK: ![[VBAR]] = !{!"bar", !"bar@VER"}
+
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-unknown-linux-gnu"
 
 module asm ".text"
 module asm ".balign 16"

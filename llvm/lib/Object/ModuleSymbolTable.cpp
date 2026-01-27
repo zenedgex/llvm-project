@@ -50,6 +50,24 @@
 using namespace llvm;
 using namespace object;
 
+static void addSpecialSymbols(
+    const Module &M,
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
+  // In ELF, object code generated for x86-32 and some code models of x86-64 may
+  // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the
+  // IR. Record it like inline asm symbols.
+  Triple TT(M.getTargetTriple());
+  if (!TT.isOSBinFormatELF() || !TT.isX86())
+    return;
+  auto CM = M.getCodeModel();
+  if (TT.getArch() == Triple::x86 || CM == CodeModel::Medium ||
+      CM == CodeModel::Large) {
+    AsmSymbol("_GLOBAL_OFFSET_TABLE_",
+              BasicSymbolRef::Flags(BasicSymbolRef::SF_Undefined |
+                                    BasicSymbolRef::SF_Global));
+  }
+}
+
 void ModuleSymbolTable::addModule(Module *M) {
   if (FirstMod)
     assert(FirstMod->getTargetTriple() == M->getTargetTriple());
@@ -59,10 +77,21 @@ void ModuleSymbolTable::addModule(Module *M) {
   for (GlobalValue &GV : M->global_values())
     SymTab.push_back(&GV);
 
-  CollectAsmSymbols(*M, [this](StringRef Name, BasicSymbolRef::Flags Flags) {
+  auto AddSymbols = [this](StringRef Name, BasicSymbolRef::Flags Flags) {
     SymTab.push_back(new (AsmSymbols.Allocate())
                          AsmSymbol(std::string(Name), Flags));
-  });
+  };
+
+  if (M->getModuleInlineAsm().empty()) {
+    addSpecialSymbols(*M, AddSymbols);
+    return;
+  }
+
+  // Make sure that global-asm-symbols is materialized. Otherwise
+  // CollectAsmSymbols falls back to parsing.
+  consumeError(M->materializeMetadata());
+
+  CollectAsmSymbols(*M, AddSymbols);
 }
 
 static void initializeRecordStreamer(
@@ -141,24 +170,6 @@ static void initializeRecordStreamer(
     return;
 
   Init(Streamer);
-}
-
-static void addSpecialSymbols(
-    const Module &M,
-    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
-  // In ELF, object code generated for x86-32 and some code models of x86-64 may
-  // reference the special symbol _GLOBAL_OFFSET_TABLE_ that is not used in the
-  // IR. Record it like inline asm symbols.
-  Triple TT(M.getTargetTriple());
-  if (!TT.isOSBinFormatELF() || !TT.isX86())
-    return;
-  auto CM = M.getCodeModel();
-  if (TT.getArch() == Triple::x86 || CM == CodeModel::Medium ||
-      CM == CodeModel::Large) {
-    AsmSymbol("_GLOBAL_OFFSET_TABLE_",
-              BasicSymbolRef::Flags(BasicSymbolRef::SF_Undefined |
-                                    BasicSymbolRef::SF_Global));
-  }
 }
 
 static void
