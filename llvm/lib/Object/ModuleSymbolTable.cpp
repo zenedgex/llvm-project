@@ -235,21 +235,20 @@ void ModuleSymbolTable::CollectAsmSymvers(
   MDTuple *SymversMD =
       dyn_cast_if_present<MDTuple>(M.getModuleFlag("global-asm-symvers"));
 
-  if (SymversMD) {
-    for (const Metadata *MD : SymversMD->operands()) {
-      const MDTuple *SymverMD = cast<MDTuple>(MD);
-      StringRef Name = cast<MDString>(SymverMD->getOperand(0))->getString();
-      for (size_t i = 1, End = SymverMD->getNumOperands(); i < End; ++i) {
-        AsmSymver(Name, cast<MDString>(SymverMD->getOperand(i))->getString());
-      }
-    }
+  if (!SymversMD) {
+    initializeRecordStreamer(
+        M, /*CPU=*/"", /*Features=*/"",
+        [&](RecordStreamer &Streamer) { addSymvers(Streamer, AsmSymver); },
+        /*DiagHandler=*/nullptr);
     return;
   }
 
-  initializeRecordStreamer(
-      M, /*CPU=*/"", /*Features=*/"",
-      [&](RecordStreamer &Streamer) { addSymvers(Streamer, AsmSymver); },
-      /*DiagHandler=*/nullptr);
+  for (const Metadata *MD : SymversMD->operands()) {
+    const MDTuple *SymverMD = cast<MDTuple>(MD);
+    StringRef Name = cast<MDString>(SymverMD->getOperand(0))->getString();
+    for (size_t Idx = 1, End = SymverMD->getNumOperands(); Idx < End; ++Idx)
+      AsmSymver(Name, cast<MDString>(SymverMD->getOperand(Idx))->getString());
+  }
 }
 
 bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
@@ -319,9 +318,8 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
   if (!SymversMap.empty()) {
     SmallVector<llvm::Metadata *, 16> Symvers;
     Symvers.reserve(SymversMap.size());
-    for (const auto &KV : SymversMap) {
+    for (const auto &KV : SymversMap)
       Symvers.push_back(llvm::MDNode::get(Ctx, KV.second));
-    }
 
     M.addModuleFlag(llvm::Module::Append, "global-asm-symvers",
                     llvm::MDNode::get(Ctx, Symvers));
