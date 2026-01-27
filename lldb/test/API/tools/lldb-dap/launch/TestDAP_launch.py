@@ -558,7 +558,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         output = self.collect_console(pattern=terminateCommands[0])
         self.verify_commands("terminateCommands", output, terminateCommands)
 
-    @expectedFailureWindows
     def test_version(self):
         """
         Tests that "initialize" response contains the "version" string the same
