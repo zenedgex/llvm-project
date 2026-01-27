@@ -264,7 +264,6 @@ void ModuleSymbolTable::CollectAsmSymvers(
 
 bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
                                         StringRef Features) {
-  bool Changed = false;
   llvm::LLVMContext &Ctx = M.getContext();
 
   bool HaveErrors = false;
@@ -319,25 +318,18 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
 
   // Emit a symbol table as module flags, so they can be traversed
   // later with CollectAsmSymbols and CollectAsmSymvers.
+  M.addModuleFlag(llvm::Module::Append, "global-asm-symbols",
+                  llvm::MDNode::get(Ctx, Symbols));
 
-  if (!Symbols.empty()) {
-    M.addModuleFlag(llvm::Module::Append, "global-asm-symbols",
-                    llvm::MDNode::get(Ctx, Symbols));
-    Changed = true;
-  }
+  SmallVector<llvm::Metadata *, 16> Symvers;
+  Symvers.reserve(SymversMap.size());
+  for (const auto &KV : SymversMap)
+    Symvers.push_back(llvm::MDNode::get(Ctx, KV.second));
 
-  if (!SymversMap.empty()) {
-    SmallVector<llvm::Metadata *, 16> Symvers;
-    Symvers.reserve(SymversMap.size());
-    for (const auto &KV : SymversMap)
-      Symvers.push_back(llvm::MDNode::get(Ctx, KV.second));
+  M.addModuleFlag(llvm::Module::Append, "global-asm-symvers",
+                  llvm::MDNode::get(Ctx, Symvers));
 
-    M.addModuleFlag(llvm::Module::Append, "global-asm-symvers",
-                    llvm::MDNode::get(Ctx, Symvers));
-    Changed = true;
-  }
-
-  return Changed;
+  return true;
 }
 
 void ModuleSymbolTable::printSymbolName(raw_ostream &OS, Symbol S) const {
