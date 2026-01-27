@@ -14323,6 +14323,25 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           return llvm::minimum(A, B);
         });
 
+  case clang::X86::BI__builtin_ia32_minss:
+  case clang::X86::BI__builtin_ia32_minsd:
+  case clang::X86::BI__builtin_ia32_minsh:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_minsh_round_mask:
+    return EvaluateScalarFpRoundMaskBinOp(
+        [](const APFloat &A, const APFloat &B) {
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
   case clang::X86::BI__builtin_ia32_maxps:
   case clang::X86::BI__builtin_ia32_maxpd:
   case clang::X86::BI__builtin_ia32_maxps256:
@@ -14343,17 +14362,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           return llvm::maximum(A, B);
         });
 
-  case clang::X86::BI__builtin_ia32_minss:
-  case clang::X86::BI__builtin_ia32_minsd:
-  case clang::X86::BI__builtin_ia32_minsh:
-    return EvaluateFpBinOpExpr(
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::minimum(A, B);
-        },
-        /*IsScalar=*/true);
-
   case clang::X86::BI__builtin_ia32_maxss:
   case clang::X86::BI__builtin_ia32_maxsd:
   case clang::X86::BI__builtin_ia32_maxsh:
@@ -14364,14 +14372,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           return llvm::maximum(A, B);
         },
         /*IsScalar=*/true);
-
-  case clang::X86::BI__builtin_ia32_minsh_round_mask:
-    return EvaluateScalarFpRoundMaskBinOp(
-        [](const APFloat &A, const APFloat &B) {
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::minimum(A, B);
-        });
 
   case clang::X86::BI__builtin_ia32_maxsh_round_mask:
     return EvaluateScalarFpRoundMaskBinOp(
