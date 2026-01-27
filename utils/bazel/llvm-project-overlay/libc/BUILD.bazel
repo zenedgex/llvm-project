@@ -3715,6 +3715,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "___support_math_hypot",
+    hdrs = ["src/__support/math/hypot.h"],
+    deps = [
+        ":___support_common",
+        ":___support_fputil_hypot",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinhf",
     hdrs = ["src/__support/math/sinhf.h"],
     deps = [
@@ -3767,21 +3776,6 @@ libc_support_library(
         ":__support_macros_properties_cpu_features",
         ":__support_range_reduction",
         ":__support_sincosf_utils",
-    ],
-)
-
-libc_support_library(
-    name = "src___support_math_hypot",
-    hdrs = ["src/__support/math/hypot.h"],
-    deps = [
-        ":src___support_common",
-        ":src___support_cpp_bit",
-        ":src___support_cpp_type_traits",
-        ":src___support_fp_util_basic_operations",
-        ":src___support_fp_util_fenv_impl",
-        ":src___support_fp_util_fp_bits",
-        ":src___support_fp_util_rounding_mode",
-        ":src___support_uint128",
     ],
 )
 
