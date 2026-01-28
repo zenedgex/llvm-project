@@ -1570,11 +1570,9 @@ void CodeGenModule::Release() {
                               getContext().getTargetInfo().getMaxTLSAlign());
 
   // Emit module flags for global inline assembly symbols.
-  if (!TheModule.getModuleInlineAsm().empty()) {
-    llvm::ModuleSymbolTable::EmitModuleFlags(
-        TheModule, getTarget().getTargetOpts().CPU,
-        llvm::join(getTarget().getTargetOpts().Features, ","));
-  }
+  llvm::ModuleSymbolTable::EmitModuleFlags(
+      TheModule, getTarget().getTargetOpts().CPU,
+      llvm::join(getTarget().getTargetOpts().Features, ","));
 
   getTargetCodeGenInfo().emitTargetGlobals(*this);
 

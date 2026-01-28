@@ -264,6 +264,9 @@ void ModuleSymbolTable::CollectAsmSymvers(
 
 bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
                                         StringRef Features) {
+  if (M.getModuleInlineAsm().empty())
+    return false;
+
   llvm::LLVMContext &Ctx = M.getContext();
 
   bool HaveErrors = false;
