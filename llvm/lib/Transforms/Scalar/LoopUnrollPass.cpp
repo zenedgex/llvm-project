@@ -369,7 +369,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
   // Only analyze inner loops. We can't properly estimate cost of nested loops
   // and we won't visit inner loops again anyway.
   if (!L->isInnermost()) {
-    LLVM_DEBUG(dbgs() << "   Not analyzing loop cost: not an innermost loop.\n");
+    LLVM_DEBUG(
+        dbgs() << "   Not analyzing loop cost: not an innermost loop.\n");
     return std::nullopt;
   }
 
@@ -1263,8 +1264,9 @@ bool llvm::computeUnrollCount(
   UP.Runtime |= PragmaEnableUnroll || PragmaCount > 0 || UserUnrollCount;
   if (!UP.Runtime) {
     LLVM_DEBUG(
-        dbgs() << " Will not try to unroll loop with runtime trip count because "
-               << "-unroll-runtime not given.\n");
+        dbgs()
+        << " Will not try to unroll loop with runtime trip count because "
+        << "-unroll-runtime not given.\n");
     UP.Count = 0;
     return false;
   }
@@ -1316,8 +1318,7 @@ bool llvm::computeUnrollCount(
   if (MaxTripCount && UP.Count > MaxTripCount)
     UP.Count = MaxTripCount;
 
-  LLVM_DEBUG(dbgs() << " Runtime unrolling with count: " << UP.Count
-                    << "\n");
+  LLVM_DEBUG(dbgs() << " Runtime unrolling with count: " << UP.Count << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
   return ExplicitUnroll;
