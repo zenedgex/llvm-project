@@ -12203,7 +12203,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       };
 
   auto EvaluateScalarFpRoundMaskBinOp =
-      [&](llvm::function_ref<APFloat(const APFloat &, const APFloat &)> Fn) {
+      [&](llvm::function_ref<std::optional<APFloat>(
+              const APFloat &, const APFloat &, std::optional<APSInt>)>
+              Fn) {
         assert(E->getNumArgs() == 5);
         APValue VecA, VecB, VecSrc;
         APSInt MaskVal, Rounding;
@@ -12215,10 +12217,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             !EvaluateInteger(E->getArg(4), Rounding, Info))
           return false;
 
-        // Only _MM_FROUND_CUR_DIRECTION (4) is supported.
-        if (Rounding != 4)
-          return false;
-
         unsigned NumElems = VecA.getVectorLength();
         SmallVector<APValue, 8> ResultElements;
         ResultElements.reserve(NumElems);
@@ -12226,10 +12224,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         if (MaskVal.getZExtValue() & 1) {
           const APFloat &EltA = VecA.getVectorElt(0).getFloat();
           const APFloat &EltB = VecB.getVectorElt(0).getFloat();
-          if (EltA.isNaN() || EltA.isInfinity() || EltA.isDenormal() ||
-              EltB.isNaN() || EltB.isInfinity() || EltB.isDenormal())
+          std::optional<APFloat> Result = Fn(EltA, EltB, Rounding);
+          if (!Result)
             return false;
-          ResultElements.push_back(APValue(Fn(EltA, EltB)));
+          ResultElements.push_back(APValue(*Result));
         } else {
           ResultElements.push_back(VecSrc.getVectorElt(0));
         }
@@ -14327,7 +14325,11 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_minsd:
   case clang::X86::BI__builtin_ia32_minsh:
     return EvaluateFpBinOpExpr(
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::minimum(A, B);
@@ -14336,7 +14338,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case clang::X86::BI__builtin_ia32_minsh_round_mask:
     return EvaluateScalarFpRoundMaskBinOp(
-        [](const APFloat &A, const APFloat &B) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          if (!RoundingMode || *RoundingMode != 4)
+            return std::nullopt;
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::minimum(A, B);
@@ -14366,7 +14374,11 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_maxsd:
   case clang::X86::BI__builtin_ia32_maxsh:
     return EvaluateFpBinOpExpr(
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);
@@ -14375,7 +14387,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
 
   case clang::X86::BI__builtin_ia32_maxsh_round_mask:
     return EvaluateScalarFpRoundMaskBinOp(
-        [](const APFloat &A, const APFloat &B) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          if (!RoundingMode || *RoundingMode != 4)
+            return std::nullopt;
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);
