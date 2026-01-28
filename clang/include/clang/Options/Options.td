@@ -2168,10 +2168,12 @@ defm diagnostics_show_option : BoolFOption<"diagnostics-show-option",
     DiagnosticOpts<"ShowOptionNames">, DefaultTrue,
     NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
     PosFlag<SetTrue, [], [ClangOption], "Print option name with mappable diagnostics">>;
-defm diagnostics_show_note_include_stack : BoolFOption<"diagnostics-show-note-include-stack",
-    DiagnosticOpts<"ShowNoteIncludeStack">, DefaultFalse,
-    PosFlag<SetTrue, [], [ClangOption], "Display include stacks for diagnostic notes">,
-    NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
+defm diagnostics_show_note_include_stack
+    : BoolFOption<"diagnostics-show-note-include-stack",
+                  DiagnosticOpts<"ShowNoteIncludeStack">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption],
+                          "Display include stacks for diagnostic notes">,
+                  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 def fdiagnostics_format_EQ : Joined<["-"], "fdiagnostics-format=">, Group<f_clang_Group>;
 def fdiagnostics_show_category_EQ : Joined<["-"], "fdiagnostics-show-category=">, Group<f_clang_Group>;
 def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tree">,

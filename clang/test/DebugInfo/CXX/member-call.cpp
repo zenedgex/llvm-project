@@ -16,8 +16,8 @@ void test(Foo *f) {
 }
 
 // CHECK-LABEL: @_Z4testP3Foo
-// CHECK: call {{.*}} @_ZN3Foo3fooEv{{.*}}, !dbg ![[CALL1LOC:.*]]
-// CHECK: call void @_ZN3Bar3barEv{{.*}}, !dbg ![[CALL2LOC:.*]]
+// CHECK: call {{.*}} @_ZN3Foo3fooEv{{.*}}, !dbg ![[CALL1LOC:.*]], !srcloc
+// CHECK: call void @_ZN3Bar3barEv{{.*}}, !dbg ![[CALL2LOC:.*]], !srcloc
 
 // CHECK: ![[CALL1LOC]] = !DILocation(line: [[LINE:[0-9]+]], column: 6,
 // CHECK: ![[CALL2LOC]] = !DILocation(line: [[LINE]], column: 13,
