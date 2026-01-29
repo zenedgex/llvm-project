@@ -496,12 +496,11 @@ void llvm::diagnoseDontCall(const CallInst &CI) {
               DebugChain.push_back({SP->getName(), Loc->getFilename(),
                                     Loc->getLine(), Loc->getColumn()});
         };
-        if (const DILocation *Loc = DL.get()) {
-          AddLocation(Loc);
-          for (const DILocation *InlinedAt = Loc->getInlinedAt(); InlinedAt;
-               InlinedAt = InlinedAt->getInlinedAt())
-            AddLocation(InlinedAt);
-        }
+        const DILocation *Loc = DL.get();
+        AddLocation(Loc);
+        for (const DILocation *InlinedAt = Loc->getInlinedAt(); InlinedAt;
+              InlinedAt = InlinedAt->getInlinedAt())
+          AddLocation(InlinedAt);
         D.setDebugInlineChain(std::move(DebugChain));
       }
 
