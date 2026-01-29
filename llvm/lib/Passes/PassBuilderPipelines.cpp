@@ -142,6 +142,7 @@
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
+#include "llvm/Transforms/Utils/LifetimeMove.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
@@ -576,6 +577,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(ADCEPass());
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
+  FPM.addPass(LifetimeMovePass());
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
@@ -797,6 +799,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                                   .convertSwitchToArithmetic(true)
                                   .hoistCommonInsts(true)
                                   .sinkCommonInsts(true)));
+  FPM.addPass(LifetimeMovePass());
   FPM.addPass(InstCombinePass());
   invokePeepholeEPCallbacks(FPM, Level);
 
@@ -833,6 +836,7 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
   FPM.addPass(EarlyCSEPass()); // Catch trivial redundancies.
   FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
       true)));                    // Merge & remove basic blocks.
+  FPM.addPass(LifetimeMovePass());
   FPM.addPass(InstCombinePass()); // Combine silly sequences.
   invokePeepholeEPCallbacks(FPM, Level);
 
@@ -1381,6 +1385,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
         createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true));
     ExtraPasses.addPass(
         SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
+    ExtraPasses.addPass(LifetimeMovePass());
     ExtraPasses.addPass(InstCombinePass());
     FPM.addPass(std::move(ExtraPasses));
   }
