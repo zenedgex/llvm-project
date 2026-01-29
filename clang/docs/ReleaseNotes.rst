@@ -316,6 +316,8 @@ AST Matchers
 ------------
 - Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 
+Add `matchesString` for `StringLiteral` which matches literals on given `RegExp`.
+
 clang-format
 ------------
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
