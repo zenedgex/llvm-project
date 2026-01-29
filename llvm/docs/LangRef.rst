@@ -20693,6 +20693,10 @@ non-deterministically either:
  * Return a :ref:`NaN <floatnan>`.
  * Treat the signaling NaN as a quiet NaN.
 
+Don't use it if possible, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vector.reduce.fmaximum``' or '``llvm.vector.reduce.fmaximumnum``' instead.
+
 Arguments:
 """"""""""
 The argument to this intrinsic must be a vector of floating-point values.
@@ -20726,6 +20730,10 @@ non-deterministically either:
 
  * Return a :ref:`NaN <floatnan>`.
  * Treat the signaling NaN as a quiet NaN.
+
+Don't use it if possible, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vector.reduce.fminimum``' or '``llvm.vector.reduce.fminimumnum``' instead.
 
 Arguments:
 """"""""""
@@ -24565,6 +24573,10 @@ This instruction has the same comparison semantics as the
 
 To ignore the start value, the neutral value can be used.
 
+Don't use it if possible, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vp.vector.reduce.fmaximum``' or '``llvm.vp.vector.reduce.fmaximumnum``' instead.
+
 Examples:
 """""""""
 
@@ -24631,6 +24643,10 @@ This instruction has the same comparison semantics as the
 '``llvm.minnum.*``' intrinsic).
 
 To ignore the start value, the neutral value can be used.
+
+Don't use it if possible, since the different order of inputs may produce different
+outputs, and it is hard to optimize with Vector or SIMD extensions.
+Use '``llvm.vp.vector.reduce.fminimum``' or '``llvm.vp.vector.reduce.fminimumnum``' instead.
 
 Examples:
 """""""""
