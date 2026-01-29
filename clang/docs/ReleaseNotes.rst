@@ -199,6 +199,8 @@ Improvements to Clang's diagnostics
       DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
     };
 
+- Clang now diagnoses ``-Wunused-member-function`` with a specific message for constructors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
