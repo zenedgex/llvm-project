@@ -6070,7 +6070,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // inline-annotated functions are still not guaranteed to be inlined.
   if (TargetDecl) {
     bool NeedSrcLoc = TargetDecl->hasAttr<ErrorAttr>();
-    if (!NeedSrcLoc) {
+    if (!NeedSrcLoc && !getDebugInfo()) {
       if (const auto *FD = dyn_cast<FunctionDecl>(TargetDecl))
         NeedSrcLoc = FD->isInlined() || FD->hasAttr<AlwaysInlineAttr>() ||
                      FD->getStorageClass() == SC_Static ||

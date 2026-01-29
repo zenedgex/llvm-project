@@ -4513,7 +4513,7 @@ int foobar() {
 // CHECK-TLS3-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT]], align 8, !dbg [[DBG185:![0-9]+]]
 // CHECK-TLS3-NEXT:    store ptr @arr_x, ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG187:![0-9]+]]
 // CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) @arr_x, i32 noundef 1)
-// CHECK-TLS3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG188:![0-9]+]],
+// CHECK-TLS3-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]], !dbg [[DBG188:![0-9]+]]
 // CHECK-TLS3:       invoke.cont:
 // CHECK-TLS3-NEXT:    store ptr getelementptr inbounds ([[STRUCT_S1:%.*]], ptr @arr_x, i64 1), ptr [[ARRAYINIT_ENDOFINIT1]], align 8, !dbg [[DBG187]]
 // CHECK-TLS3-NEXT:    invoke void @_ZN2S1C1Ei(ptr noundef nonnull align 4 dereferenceable(4) getelementptr inbounds ([[STRUCT_S1]], ptr @arr_x, i64 1), i32 noundef 2)
