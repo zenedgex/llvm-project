@@ -109,4 +109,4 @@ void test_incidental(void) { not_marked_inline(); }
 // CHECK-NOT: :{{.*}}: note: inlined by function 'test_incidental'
 
 // Fallback note should appear (no debug info).
-// CHECK: note: use '-gline-directives-only' (implied by '-g1') or higher for more accurate inlining chain locations
+// CHECK: note: use '-gline-directives-only' (implied by '-g1' or higher) for more accurate inlining chain locations

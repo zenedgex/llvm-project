@@ -64,4 +64,4 @@ void test_error_cross_tu(void) {
 // CHECK: main.c:{{.*}}: note: inlined by function 'test_error_cross_tu'
 
 // Fallback note should appear (no debug info).
-// CHECK: note: use '-gline-directives-only' (implied by '-g1') or higher for more accurate inlining chain locations
+// CHECK: note: use '-gline-directives-only' (implied by '-g1' or higher) for more accurate inlining chain locations

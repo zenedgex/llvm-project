@@ -29,7 +29,7 @@ void caller() {
 // HEURISTIC: :16:{{.*}}: note: called by function '{{.*}}wrapper{{.*}}'
 // HEURISTIC: :16:{{.*}}: note: inlined by function '{{.*}}middle{{.*}}'
 // HEURISTIC: :16:{{.*}}: note: inlined by function '{{.*}}caller{{.*}}'
-// HEURISTIC: note: use '-gline-directives-only' (implied by '-g1') or higher for more accurate inlining chain locations
+// HEURISTIC: note: use '-gline-directives-only' (implied by '-g1' or higher) for more accurate inlining chain locations
 
 // DEBUG: :16:{{.*}}: warning: call to '{{.*}}dangerous{{.*}}'
 // DEBUG: :16:{{.*}}: note: called by function '{{.*}}wrapper{{.*}}'

@@ -22,7 +22,7 @@ void entry(void) {
 // ENABLED-HEURISTIC: :8:{{.*}}: note: called by function 'level1'
 // ENABLED-HEURISTIC: :12:{{.*}}: note: inlined by function 'level2'
 // ENABLED-HEURISTIC: :16:{{.*}}: note: inlined by function 'entry'
-// ENABLED-HEURISTIC: note: use '-gline-directives-only' (implied by '-g1') or higher for more accurate inlining chain locations
+// ENABLED-HEURISTIC: note: use '-gline-directives-only' (implied by '-g1' or higher) for more accurate inlining chain locations
 
 // Enabled with debug info: accurate locations.
 // ENABLED-DEBUG: :8:{{.*}}: warning: call to 'bad_func'
