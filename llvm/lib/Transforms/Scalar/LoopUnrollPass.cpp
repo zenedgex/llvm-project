@@ -724,7 +724,6 @@ UnrollCostEstimator::UnrollCostEstimator(
 
 bool UnrollCostEstimator::canUnroll(OptimizationRemarkEmitter *ORE,
                                     const Loop *L) const {
-  // Helper to emit debug output and a missed optimization remark.
   auto ReportCannotUnroll = [&](StringRef Reason) {
     LLVM_DEBUG(dbgs().indent(1) << "Not unrolling: " << Reason << ".\n");
     if (ORE && L)
