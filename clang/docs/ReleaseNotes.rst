@@ -204,6 +204,8 @@ Improvements to Clang's diagnostics
 
 - Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
 
+- ``-Wimplicit-fallthrough`` was added to ``-Wextra`` for GCC compatibility.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
