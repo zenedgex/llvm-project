@@ -16,16 +16,16 @@
 // CHECK:       clang: remark: printing module dependency graph [-Rmodules-driver]
 // CHECK-NEXT:  digraph "Module Dependency Graph" {
 //
-// CHECK:      "[[PREFIX]]/main.cpp-[[TRIPLE:.*]]" [ fillcolor=3, label="{ Filename: [[PREFIX]]/main.cpp | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "A-[[TRIPLE]]" [ fillcolor=2, label="{ Module type: Named module | Module name: A | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "A:B-[[TRIPLE]]" [ fillcolor=2, label="{ Module type: Named module | Module name: A:B | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "A:C-[[TRIPLE]]" [ fillcolor=2, label="{ Module type: Named module | Module name: A:C | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "B-[[TRIPLE]]" [ fillcolor=2, label="{ Module type: Named module | Module name: B | Triple: [[TRIPLE]] }"];
-// CHECK-NEXT: "transitive1-[[HASH_TRANSITIVE1:.*]]" [ fillcolor=1, label="{ Module type: Clang module | Module name: transitive1 | Hash: [[HASH_TRANSITIVE1]] }"];
-// CHECK-NEXT: "transitive2-[[HASH_TRANSITIVE2:.*]]" [ fillcolor=1, label="{ Module type: Clang module | Module name: transitive2 | Hash: [[HASH_TRANSITIVE2]] }"];
-// CHECK-NEXT: "direct1-[[HASH_DIRECT1:.*]]" [ fillcolor=1, label="{ Module type: Clang module | Module name: direct1 | Hash: [[HASH_DIRECT1]] }"];
-// CHECK-NEXT: "direct2-[[HASH_DIRECT2:.*]]" [ fillcolor=1, label="{ Module type: Clang module | Module name: direct2 | Hash: [[HASH_DIRECT2]] }"];
-// CHECK-NEXT: "root-[[HASH_ROOT:.*]]" [ fillcolor=1, label="{ Module type: Clang module | Module name: root | Hash: [[HASH_ROOT]] }"];
+// CHECK:      "[[PREFIX]]/main.cpp-[[TRIPLE:.*]]" [fillcolor=3, label="{ Filename: [[PREFIX]]/main.cpp | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "A-[[TRIPLE]]" [fillcolor=2, label="{ Module type: Named module | Module name: A | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "A:B-[[TRIPLE]]" [fillcolor=2, label="{ Module type: Named module | Module name: A:B | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "A:C-[[TRIPLE]]" [fillcolor=2, label="{ Module type: Named module | Module name: A:C | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "B-[[TRIPLE]]" [fillcolor=2, label="{ Module type: Named module | Module name: B | Triple: [[TRIPLE]] }"];
+// CHECK-NEXT: "transitive1-[[HASH_TRANSITIVE1:.*]]" [fillcolor=1, label="{ Module type: Clang module | Module name: transitive1 | Hash: [[HASH_TRANSITIVE1]] }"];
+// CHECK-NEXT: "transitive2-[[HASH_TRANSITIVE2:.*]]" [fillcolor=1, label="{ Module type: Clang module | Module name: transitive2 | Hash: [[HASH_TRANSITIVE2]] }"];
+// CHECK-NEXT: "direct1-[[HASH_DIRECT1:.*]]" [fillcolor=1, label="{ Module type: Clang module | Module name: direct1 | Hash: [[HASH_DIRECT1]] }"];
+// CHECK-NEXT: "direct2-[[HASH_DIRECT2:.*]]" [fillcolor=1, label="{ Module type: Clang module | Module name: direct2 | Hash: [[HASH_DIRECT2]] }"];
+// CHECK-NEXT: "root-[[HASH_ROOT:.*]]" [fillcolor=1, label="{ Module type: Clang module | Module name: root | Hash: [[HASH_ROOT]] }"];
 //
 // CHECK:        "A-[[TRIPLE]]" -> "[[PREFIX]]/main.cpp-[[TRIPLE]]";
 // CHECK-NEXT:   "A-[[TRIPLE]]" -> "B-[[TRIPLE]]";
