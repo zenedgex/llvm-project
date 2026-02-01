@@ -405,16 +405,8 @@ public:
 
   EdgeKind getKind() const { return Kind; };
 
-  /// Returns true if this edge describes a non-module dependency, and false
-  /// otherwise.
   bool isRegular() const { return Kind == EdgeKind::Regular; }
-
-  /// Returns true if this edge describes a module dependency, and false
-  /// otherwise.
   bool isModuleDependency() const { return Kind == EdgeKind::ModuleDependency; }
-
-  /// Returns true if this is an edge stemming from the root node, and false
-  /// otherwise.
   bool isRooted() const { return Kind == EdgeKind::Rooted; }
 
 private:
@@ -801,7 +793,8 @@ static bool isEligibleScanInput(const Command &CC1Job) {
 }
 
 // Prunes jobs generated for standard library modules that weren't imported by
-// any user inputs.
+// any user inputs (i.e., each job corresponding to a std::nullopt in \p
+// InputDeps).
 static void pruneUnimportedStdlibModuleJobs(
     CompilationGraph &Graph, MutableArrayRef<CC1JobNode *> ScanInputNodes,
     ArrayRef<std::optional<InputDependencies>> InputDeps) {
@@ -1459,16 +1452,15 @@ void driver::modules::runModulesDriver(
 
   auto Graph = createGraphFromJobs(C.getJobs().takeJobs());
 
-  // Build the list of scan inputs and the associated context.
-  // For jobs corresponding to manifest entries, apply any manifest-specified
-  // local arguments.
+  // Build the list of scan inputs and the associated context and for any jobs
+  // corresponding to manifest entries, apply the specified manifest-specified
+  // local-arguments.
   const auto CC1Nodes =
       llvm::map_range(llvm::make_filter_range(Graph, llvm::IsaPred<CC1JobNode>),
                       llvm::CastTo<CC1JobNode>);
   const auto ManifestLookup = createManifestLookupMap(ManifestEntries);
   SmallVector<CC1JobNode *> ScanInputNodes;
   ScanInputContext InputContext;
-
   for (auto *CC1Node : CC1Nodes) {
     auto &CC1Job = *CC1Node->Job;
     if (auto *ManifestEntry = getManifestEntryForJob(CC1Job, ManifestLookup)) {
@@ -1491,9 +1483,8 @@ void driver::modules::runModulesDriver(
     }
   }
 
-  auto ScanInputJobs = llvm::map_range(
-      ScanInputNodes,
-      [](const auto *CC1Node) -> const Command & { return *CC1Node->Job; });
+  const auto ScanInputJobs = llvm::map_range(
+      ScanInputNodes, [](const auto *CC1Node) { return *CC1Node->Job; });
   auto MaybeScanResults =
       scanDependencies(ScanInputJobs, InputContext, *MaybeModuleCachePath,
                        &C.getDriver().getVFS(), Diags);
@@ -1505,21 +1496,24 @@ void driver::modules::runModulesDriver(
   pruneUnimportedStdlibModuleJobs(Graph, ScanInputNodes,
                                   MaybeScanResults->InputDeps);
 
-  // TODO: Create jobs for each entry in MaybeScanResults.ClangModuleDeps.
-  // Then, pass in the jobs instead here.
+  // TODO: Generate -cc1 jobs for each Clang module and pass in the jobs here
+  // instead.
   auto ClangModuleNodes =
       createClangModuleNodes(Graph, MaybeScanResults->ModuleDeps.size());
 
-  if (!addModuleDependencyInfo(Graph, ScanInputNodes, ClangModuleNodes,
-                               std::move(*MaybeScanResults), Diags))
+  const bool Success =
+      addModuleDependencyInfo(Graph, ScanInputNodes, ClangModuleNodes,
+                              std::move(*MaybeScanResults), Diags);
+  if (!Success)
     return;
+
   createAndConnectRootNode(Graph);
+
+  // TODO: Detect cyclic dependencies in the module dependency graph.
 
   Diags.Report(diag::remark_printing_module_graph);
   if (!Diags.isLastDiagnosticIgnored())
     llvm::WriteGraph<const CompilationGraph *>(llvm::errs(), &Graph);
-
-  // TODO: Detect cyclic dependencies in the module dependency graph.
 
   // TODO: Update each driver job's command line to emit or pass-in the correct
   // module files.

@@ -627,8 +627,6 @@ def err_dependency_scan_failed : Error<
   "failed to perform dependency scan">;
 def err_modules_driver_named_module_redefinition : Error<
   "duplicate definitions of C++20 named module '%0' in '%1' and '%2'">;
-def err_building_dependency_graph  : Error<
-  "failed to construct the module dependency graph">;
 def remark_printing_module_graph : Remark<
   "printing module dependency graph">,
   InGroup<ModulesDriver>;
