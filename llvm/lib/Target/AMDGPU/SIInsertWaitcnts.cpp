@@ -3189,14 +3189,12 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   MachineInstr *OldWaitcntInstr = nullptr;
   AtomicRMWState RMWState = AtomicRMWState::NotInBlock;
 
-  for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
-                                         E = Block.instr_end();
-       Iter != E;) {
+  // NOTE: we may erase Inst and/or may append instrs after Inst while iterating
+  for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin();
+       Iter != Block.instr_end(); ++Iter) {
     MachineInstr &Inst = *Iter;
-    if (Inst.isMetaInstruction()) {
-      ++Iter;
+    if (Inst.isMetaInstruction())
       continue;
-    }
     // Get the atomic RMW block state for current instruction.
     RMWState = getAtomicRMWState(Inst, RMWState);
 
@@ -3204,20 +3202,20 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     // the memory legalizer.
     if (isWaitInstr(Inst) ||
         (IsExpertMode && Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
-      ++Iter;
       bool IsSoftXcnt = isSoftXcnt(Inst);
       // The Memory Legalizer conservatively inserts a soft xcnt before each
       // atomic RMW operation. However, for sequences of back-to-back atomic
       // RMWs, only the first s_wait_xcnt insertion is necessary. Optimize away
       // the redundant soft xcnts when we're inside an atomic RMW block.
-      if (Iter != E && IsSoftXcnt) {
+      if (&Inst != &Block.back() && IsSoftXcnt) {
         // Check if the next instruction can potentially change the atomic RMW
         // state.
-        RMWState = getAtomicRMWState(*Iter, RMWState);
+        RMWState = getAtomicRMWState(*Inst.getNextNode(), RMWState);
       }
 
       if (IsSoftXcnt && RMWState == AtomicRMWState::InsideBlock) {
         // Delete this soft xcnt.
+        --Iter;
         Inst.eraseFromParent();
         Modified = true;
       } else if (!OldWaitcntInstr) {
@@ -3310,8 +3308,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       VCCZCorrect = true;
       Modified = true;
     }
-
-    ++Iter;
   }
 
   // Flush counters at the end of the block if needed (for preheaders with no
