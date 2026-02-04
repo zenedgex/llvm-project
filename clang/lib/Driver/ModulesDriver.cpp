@@ -15,10 +15,12 @@
 #include "clang/Driver/ModulesDriver.h"
 #include "clang/DependencyScanning/DependencyScanningUtils.h"
 #include "clang/DependencyScanning/ModuleDepCollector.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Tool.h"
+#include "clang/Driver/Types.h"
 #include "clang/Frontend/StandaloneDiagnostic.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -28,6 +30,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
@@ -217,7 +220,7 @@ struct ScanInputContext {
   StdlibScanInputMap StdlibInputLookup;
 };
 
-/// The dependencies for a -cc1 job that is a dependency scan input
+/// The full dependencies for a -cc1 job that is a dependency scan input.
 struct InputDependencies {
   /// The name of the C++20 module exported by this translation unit.
   std::string ModuleName;
@@ -235,6 +238,10 @@ struct InputDependencies {
   /// as this translation unit.
   std::vector<std::string> NamedModuleDeps;
 
+  /// A collection of absolute paths to files that this translation unit
+  /// directly depends on, not including transitive dependencies.
+  std::vector<std::string> FileDeps;
+
   /// The compiler invocation with modifications to properly import all Clang
   /// module dependencies. Does not include argv[0].
   std::vector<std::string> BuildArgs;
@@ -247,10 +254,10 @@ struct DependencyScanResults {
   ///
   /// Entries corresponding to standard library modules which were not imported
   /// (and thus not scanned) are std::nullopt.
-  llvm::SmallVector<std::optional<InputDependencies>, 0> InputDeps;
+  llvm::SmallVector<std::optional<InputDependencies>, 0> InputDepsByInput;
 
   /// The full Clang module dependencies for this compilation.
-  SmallVector<deps::ModuleDeps, 0> ModuleDeps;
+  SmallVector<deps::ModuleDeps, 0> DiscoveredModuleDeps;
 };
 
 class CGNode;
@@ -289,88 +296,109 @@ CGNode::~CGNode() = default;
 /// There should only be one such node in a given graph.
 class RootNode : public CGNode {
 public:
-  RootNode() : CGNode(NodeKind::Root) {}
   ~RootNode() override = default;
 
   /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
   static bool classof(const CGNode *N) {
     return N->getKind() == NodeKind::Root;
   }
+
+private:
+  friend class CompilationGraph;
+
+  RootNode() : CGNode(NodeKind::Root) {}
 };
 
 /// Base class for any CGNode type that represents a single job.
 class JobNode : public CGNode {
 public:
-  JobNode() = delete;
-  JobNode(std::unique_ptr<Command> &&Job, NodeKind Kind)
-      : CGNode(Kind), Job(std::move(Job)) {}
   virtual ~JobNode() override = 0;
+
+  std::unique_ptr<Command> Job;
 
   /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
   static bool classof(const CGNode *N) {
     return N->getKind() != NodeKind::Root;
   }
 
-  std::unique_ptr<Command> Job;
+protected:
+  friend class CompilationGraph;
+
+  JobNode() = delete;
+  JobNode(std::unique_ptr<Command> &&Job, NodeKind Kind)
+      : CGNode(Kind), Job(std::move(Job)) {}
 };
 JobNode::~JobNode() = default;
 
 /// Subclass of CGNode representing a -cc1 job.
 class CC1JobNode : public JobNode {
 public:
-  CC1JobNode() = delete;
-  CC1JobNode(std::unique_ptr<Command> &&Job)
-      : JobNode(std::move(Job), NodeKind::CC1Job) {}
   ~CC1JobNode() override = default;
 
-  llvm::PointerUnion<const InputDependencies *, const deps::ModuleDeps *>
-      DependencyInfo;
+  using ScannedDeps =
+      llvm::PointerUnion<const InputDependencies *, const deps::ModuleDeps *>;
 
-  /// Returns true if a dependency scan was performed for this -cc1 job, and
-  /// false otherwise.
-  bool isScanned() const { return !DependencyInfo.isNull(); }
+  enum class DepUnitKind {
+    NonModule,
+    ClangModule,
+    NamedModule,
+    NotScanned,
+  };
 
-  /// Returns true if -cc1 job does not produce any module, and false otherwise.
-  bool isNonModule() const {
-    if (const auto *InputDeps =
-            DependencyInfo.dyn_cast<const InputDependencies *>())
-      return InputDeps->ModuleName.empty();
-    return false;
+  void setScanResult(ScannedDeps ScanResult) {
+    assert(ScanResult && "Expected non null pointer to a scan result!");
+    assert(!this->ScanResult && "Scan result already present!");
+    if (isa<const deps::ModuleDeps *>(ScanResult))
+      DepsKind = DepUnitKind::ClangModule;
+    else if (!(cast<const InputDependencies *>(ScanResult)->ModuleName.empty()))
+      DepsKind = DepUnitKind::NamedModule;
+    else
+      DepsKind = DepUnitKind::NonModule;
+    this->ScanResult = ScanResult;
   }
 
-  /// Returns true if this -cc1 job produces a C++20 named module, and false
-  /// otherwise.
-  bool isCXXNamedModule() const {
-    if (const auto *InputDeps =
-            DependencyInfo.dyn_cast<const InputDependencies *>())
-      return !InputDeps->ModuleName.empty();
-    return false;
+  DepUnitKind getDepsKind() const { return DepsKind; }
+
+  const InputDependencies &getInputDeps() const {
+    return *cast<const InputDependencies *>(ScanResult);
   }
 
-  /// Return true if this -cc1 job produces a Clang module, and false otherwise.
-  bool isClangModule() const {
-    return isa<const deps::ModuleDeps *>(DependencyInfo);
+  const deps::ModuleDeps &getModuleDeps() const {
+    return *cast<const deps::ModuleDeps *>(ScanResult);
   }
 
   /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
   static bool classof(const CGNode *N) {
     return N->getKind() == NodeKind::CC1Job;
   }
+
+private:
+  friend class CompilationGraph;
+
+  CC1JobNode() = delete;
+  CC1JobNode(std::unique_ptr<Command> &&Job)
+      : JobNode(std::move(Job), NodeKind::CC1Job) {}
+
+  ScannedDeps ScanResult = nullptr;
+  DepUnitKind DepsKind = DepUnitKind::NotScanned;
 };
 
 /// Subclass of CGNode representing a job which produces an image file, such as
 /// a linker or interface stub merge job.
 class ImageJobNode : public JobNode {
 public:
-  ImageJobNode() = delete;
-  ImageJobNode(std::unique_ptr<Command> &&Job)
-      : JobNode(std::move(Job), NodeKind::ImageJob) {}
   ~ImageJobNode() override = default;
 
   /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
   static bool classof(const CGNode *N) {
     return N->getKind() == NodeKind::ImageJob;
   }
+
+private:
+  friend class CompilationGraph;
+  ImageJobNode() = delete;
+  ImageJobNode(std::unique_ptr<Command> &&Job)
+      : JobNode(std::move(Job), NodeKind::ImageJob) {}
 };
 
 /// Subclass of CGNode representing any job not covered by the other node types.
@@ -378,15 +406,18 @@ public:
 /// Jobs represented by this node type are not modified by the modules driver.
 class MiscJobNode : public JobNode {
 public:
-  MiscJobNode() = delete;
-  MiscJobNode(std::unique_ptr<Command> &&Job)
-      : JobNode(std::move(Job), NodeKind::MiscJob) {}
   ~MiscJobNode() override = default;
 
   /// Define classof to be able to use isa<>, cast<>, dyn_cast<>, etc.
   static bool classof(const CGNode *N) {
     return N->getKind() == NodeKind::MiscJob;
   }
+
+private:
+  friend class CompilationGraph;
+  MiscJobNode() = delete;
+  MiscJobNode(std::unique_ptr<Command> &&Job)
+      : JobNode(std::move(Job), NodeKind::MiscJob) {}
 };
 
 /// Compilation Graph Edge
@@ -401,15 +432,11 @@ public:
     Rooted,
   };
 
-  CGEdge(CGNode &N, EdgeKind K) : CGEdgeBase(N), Kind(K) {}
-
-  EdgeKind getKind() const { return Kind; };
-
-  bool isRegular() const { return Kind == EdgeKind::Regular; }
-  bool isModuleDependency() const { return Kind == EdgeKind::ModuleDependency; }
-  bool isRooted() const { return Kind == EdgeKind::Rooted; }
+  EdgeKind getKind() const { return Kind; }
 
 private:
+  friend class CompilationGraph;
+  CGEdge(CGNode &N, EdgeKind K) : CGEdgeBase(N), Kind(K) {}
   EdgeKind Kind;
 };
 
@@ -421,17 +448,11 @@ public:
   CompilationGraph() = default;
   CompilationGraph(const CompilationGraph &) = delete;
   CompilationGraph(CompilationGraph &&G) : CGBase(std::move(G)) {}
-  ~CompilationGraph() {
-    for (auto *N : *this) {
-      for (auto *E : N->getEdges())
-        delete E;
-      delete N;
-    }
-  }
 
-  // Equivalent to llvm::DirectedGraph::removeNode, but also deletes the node
-  // and all incoming and outgoing edges.
-  bool removeAndDeleteNode(CGNode &N);
+  /// Transfers ownership of \p ScanResults into the graph.
+  void storeScanResults(DependencyScanResults &&ScanResults) {
+    this->ScanResults = std::move(ScanResults);
+  }
 
   void setRoot(RootNode *Root) {
     assert(!this->Root && "The graph already has a root node!");
@@ -448,46 +469,31 @@ public:
     return Root;
   }
 
-  /// Transfers ownership of \p DependencyInfo into the graph.
-  void storeDependencyInfo(DependencyScanResults &&DependencyInfo) {
-    this->DependencyInfo = std::move(DependencyInfo);
+  /// Creates a new node owned by this graph.
+  template <typename T, typename... Args> T *makeNode(Args &&...Arg) {
+    if constexpr (std::is_same_v<llvm::remove_cvref_t<T>, RootNode>) {
+      assert(!Root && "Only one RootNode is allowed");
+    }
+    T *RawPtr = new T(std::forward<Args>(Arg)...);
+    AllNodes.push_back(std::unique_ptr<CGNode>(RawPtr));
+    return RawPtr;
+  }
+
+  /// Creates a new edge owned by this graph.
+  template <typename... Args> CGEdge *makeEdge(Args &&...Arg) {
+    auto *RawPtr = new CGEdge(std::forward<Args>(Arg)...);
+    AllEdges.push_back(std::unique_ptr<CGEdge>(RawPtr));
+    return RawPtr;
   }
 
 private:
   CGNode *Root = nullptr;
-  DependencyScanResults DependencyInfo;
+  SmallVector<std::unique_ptr<CGNode>> AllNodes;
+  SmallVector<std::unique_ptr<CGEdge>> AllEdges;
+  DependencyScanResults ScanResults;
 };
 
 } // anonymous namespace
-
-bool CompilationGraph::removeAndDeleteNode(CGNode &N) {
-  iterator It = findNode(N);
-  if (It == Nodes.end())
-    return false;
-  // Remove incoming edges.
-  EdgeListTy EL;
-  for (auto *Node : Nodes) {
-    if (*Node == N)
-      continue;
-    Node->findEdgesTo(N, EL);
-    for (auto *E : EL) {
-      Node->removeEdge(*E);
-      delete E;
-    }
-    EL.clear();
-  }
-  // Remove the outgoing edges.
-  for (auto *E : N) {
-    N.removeEdge(*E);
-    delete E;
-  }
-  N.clear();
-  // Remove the node itself.
-  auto *NodePtr = *It;
-  Nodes.erase(It);
-  delete NodePtr;
-  return true;
-}
 
 static StringRef getTriple(const Command &Job) {
   return Job.getCreator().getToolChain().getTriple().getTriple();
@@ -503,7 +509,7 @@ namespace llvm {
 template <> struct GraphTraits<CGNode *> {
   using NodeRef = CGNode *;
 
-  static NodeRef CGGetTargetNode(CGEdgeBase *E) { return &E->getTargetNode(); }
+  static NodeRef CGGetTargetNode(CGEdge *E) { return &E->getTargetNode(); }
 
   using ChildIteratorType =
       mapped_iterator<CGNode::iterator, decltype(&CGGetTargetNode)>;
@@ -542,7 +548,7 @@ template <> struct GraphTraits<CompilationGraph *> : GraphTraits<CGNode *> {
 template <> struct GraphTraits<const CGNode *> {
   using NodeRef = const CGNode *;
 
-  static NodeRef CGGetTargetNode(const CGEdgeBase *E) {
+  static NodeRef CGGetTargetNode(const CGEdge *E) {
     return &E->getTargetNode();
   }
 
@@ -591,76 +597,80 @@ struct DOTGraphTraits<const CompilationGraph *> : DefaultDOTGraphTraits {
   }
 
   static std::string getGraphProperties(const CompilationGraph *) {
-    return "\tnode [shape=Mrecord, colorscheme=set23, style=filled];\n"
-           "\trankdir=BT;\n";
+    return "\tnode [shape=Mrecord, colorscheme=set23, style=filled];\n";
   }
 
+  static bool renderGraphFromBottomUp() { return true; }
+
   static bool isNodeHidden(const CGNode *N, const CompilationGraph *) {
-    return !isa<CC1JobNode>(N) ||
-           (isa<CC1JobNode>(N) && !cast<CC1JobNode>(N)->isScanned());
+    // DOT output only includes scanned CC1 nodes.
+    if (const auto *CC1Node = dyn_cast<CC1JobNode>(N))
+      return CC1Node->getDepsKind() == CC1JobNode::DepUnitKind::NotScanned;
+    return true;
   }
 
   static std::string getNodeIdentifier(const CGNode *N,
-                                       const CompilationGraph *G) {
-    assert(!isNodeHidden(N, G) && "Hidden nodes have no identifier!");
+                                       const CompilationGraph *) {
     auto *CC1Node = cast<CC1JobNode>(N);
-
-    if (CC1Node->isClangModule()) {
-      const auto &ModuleDeps =
-          *cast<const deps::ModuleDeps *>(CC1Node->DependencyInfo);
-      return llvm::formatv("{0}-{1}", ModuleDeps.ID.ModuleName,
-                           ModuleDeps.ID.ContextHash);
+    switch (CC1Node->getDepsKind()) {
+    case CC1JobNode::DepUnitKind::ClangModule: {
+      const auto &MD = CC1Node->getModuleDeps();
+      return llvm::formatv("{0}-{1}", MD.ID.ModuleName, MD.ID.ContextHash);
     }
-
-    StringRef Triple = getTriple(*CC1Node->Job);
-    if (CC1Node->isCXXNamedModule()) {
-      const auto &InputDeps =
-          *cast<const InputDependencies *>(CC1Node->DependencyInfo);
-      return llvm::formatv("{0}-{1}", InputDeps.ModuleName, Triple);
+    case CC1JobNode::DepUnitKind::NamedModule: {
+      StringRef Triple = getTriple(*CC1Node->Job);
+      return llvm::formatv("{0}-{1}", CC1Node->getInputDeps().ModuleName,
+                           Triple);
     }
-
-    // All scanned jobs always have the source file as their first input.
-    assert(CC1Node->isNonModule() && "Expected scanned non-module job!");
-    StringRef Filename = getFirstInputFilename(*CC1Node->Job);
-    return llvm::formatv("{0}-{1}", Filename, Triple).str();
+    case CC1JobNode::DepUnitKind::NonModule: {
+      StringRef Triple = getTriple(*CC1Node->Job);
+      StringRef Filename = getFirstInputFilename(*CC1Node->Job);
+      return llvm::formatv("{0}-{1}", Filename, Triple);
+    }
+    case CC1JobNode::DepUnitKind::NotScanned:
+      llvm_unreachable("This node should be hidden!");
+    }
   }
 
-  static std::string getNodeLabel(const CGNode *N, const CompilationGraph *G) {
-    assert(!isNodeHidden(N, G) && "Hidden nodes have no label!");
+  static std::string getNodeLabel(const CGNode *N, const CompilationGraph *) {
     auto *CC1Node = cast<CC1JobNode>(N);
-
-    if (CC1Node->isClangModule()) {
-      const auto &ModuleDeps =
-          *cast<const deps::ModuleDeps *>(CC1Node->DependencyInfo);
+    switch (CC1Node->getDepsKind()) {
+    case CC1JobNode::DepUnitKind::ClangModule: {
+      const auto &MD = CC1Node->getModuleDeps();
       return llvm::formatv(
           "Module type: Clang module \\| Module name: {0} \\| Hash: {1}",
-          ModuleDeps.ID.ModuleName, ModuleDeps.ID.ContextHash);
+          MD.ID.ModuleName, MD.ID.ContextHash);
     }
-
-    StringRef Triple = getTriple(*CC1Node->Job);
-    if (CC1Node->isCXXNamedModule()) {
-      const auto &InputDeps =
-          *cast<const InputDependencies *>(CC1Node->DependencyInfo);
-      return llvm::formatv(
-          "Module type: Named module \\| Module name: {0} \\| Triple: {1}",
-          InputDeps.ModuleName, Triple);
+    case CC1JobNode::DepUnitKind::NamedModule: {
+      StringRef Filename = getFirstInputFilename(*CC1Node->Job);
+      return llvm::formatv("Filename: {0} \\| Module type: Named module \\| "
+                           "Module name: {1} \\| Triple: {2}",
+                           Filename, CC1Node->getInputDeps().ModuleName,
+                           getTriple(*CC1Node->Job));
     }
-
-    // All scanned jobs always have the source file as their first input.
-    assert(CC1Node->isNonModule() && "Expected scanned non-module job!");
-    const StringRef Filename = getFirstInputFilename(*CC1Node->Job);
-    return llvm::formatv("Filename: {0} \\| Triple: {1}", Filename, Triple);
+    case CC1JobNode::DepUnitKind::NonModule: {
+      StringRef Filename = getFirstInputFilename(*CC1Node->Job);
+      return llvm::formatv("Filename: {0} \\| Triple: {1}", Filename,
+                           getTriple(*CC1Node->Job));
+    }
+    case CC1JobNode::DepUnitKind::NotScanned:
+      llvm_unreachable("This node should be hidden!");
+    }
   }
 
   static std::string getNodeAttributes(const CGNode *N,
                                        const CompilationGraph *) {
     auto *CC1Node = cast<CC1JobNode>(N);
-    if (CC1Node->isClangModule())
+    switch (CC1Node->getDepsKind()) {
+    case CC1JobNode::DepUnitKind::ClangModule:
       return "fillcolor=1";
-    if (CC1Node->isCXXNamedModule())
+    case CC1JobNode::DepUnitKind::NamedModule:
       return "fillcolor=2";
-    assert(CC1Node->isNonModule() && "Expected scanned non-module job!");
-    return "fillcolor=3";
+    case CC1JobNode::DepUnitKind::NonModule:
+      return "fillcolor=3";
+    case CC1JobNode::DepUnitKind::NotScanned:
+      llvm_unreachable("This node should be hidden!");
+    }
   }
 };
 
@@ -718,7 +728,7 @@ void llvm::GraphWriter<const CompilationGraph *>::writeNodeRelations(
   for (const auto *Node : Nodes) {
     const auto &SourceNodeID = NodeIDMap.at(Node);
     for (const auto *Edge : Node->getEdges()) {
-      if (!Edge->isModuleDependency())
+      if (Edge->getKind() != CGEdge::EdgeKind::ModuleDependency)
         continue;
 
       const auto *TargetNode = GTraits::CGGetTargetNode(Edge);
@@ -737,12 +747,13 @@ static bool isCC1Job(const Command &Job) {
   return StringRef(Job.getCreator().getName()) == "clang";
 }
 
-static JobNode *createJobNode(std::unique_ptr<Command> &&Job) {
+static JobNode *createJobNode(CompilationGraph &Graph,
+                              std::unique_ptr<Command> &&Job) {
   if (isCC1Job(*Job))
-    return new CC1JobNode(std::move(Job));
+    return Graph.makeNode<CC1JobNode>(std::move(Job));
   if (Job->getCreator().isLinkJob())
-    return new ImageJobNode(std::move(Job));
-  return new MiscJobNode(std::move(Job));
+    return Graph.makeNode<ImageJobNode>(std::move(Job));
+  return Graph.makeNode<MiscJobNode>(std::move(Job));
 }
 
 /// Builds the compilation graph from the list of \p Jobs produced by the
@@ -753,11 +764,11 @@ createGraphFromJobs(SmallVectorImpl<std::unique_ptr<Command>> &&Jobs) {
 
   llvm::DenseMap<StringRef, CGNode *> OutputToProducerNode;
   for (auto &OwnedJob : Jobs) {
-    auto *NewNode = createJobNode(std::move(OwnedJob));
+    auto *NewNode = createJobNode(Graph, std::move(OwnedJob));
     Graph.addNode(*NewNode);
-    const auto &Job = *NewNode->Job;
+    const auto &Job = NewNode->Job;
 
-    for (const auto &II : Job.getInputInfos()) {
+    for (const auto &II : Job->getInputInfos()) {
       if (!II.isFilename())
         continue;
 
@@ -766,11 +777,11 @@ createGraphFromJobs(SmallVectorImpl<std::unique_ptr<Command>> &&Jobs) {
         continue;
 
       CGNode *FromNode = It->getSecond();
-      CGEdge *E = new CGEdge(*NewNode, CGEdge::EdgeKind::Regular);
+      CGEdge *E = Graph.makeEdge(*NewNode, CGEdge::EdgeKind::Regular);
       Graph.connect(*FromNode, *NewNode, *E);
     }
 
-    for (const auto &Output : Job.getOutputFilenames()) {
+    for (const auto &Output : Job->getOutputFilenames()) {
       const bool Inserted =
           OutputToProducerNode.try_emplace(Output, NewNode).second;
       assert(Inserted &&
@@ -781,27 +792,30 @@ createGraphFromJobs(SmallVectorImpl<std::unique_ptr<Command>> &&Jobs) {
   return Graph;
 }
 
-/// Creates and adds nodes for each Clang module in by \p ClangModuleDeps.
+/// Creates and adds nodes for each Clang module in \p ClangModuleDeps.
 ///
 /// TODO: Generate and pass in the corresponding jobs instead of \p
 /// ClangModuleDepsCount.
 ///
 /// \returns the list of newly created nodes.
 static SmallVector<CC1JobNode *>
-createClangModuleNodes(CompilationGraph &Graph, size_t ClangModuleDepsCount) {
+createClangModuleNodes(CompilationGraph &Graph,
+                       ArrayRef<deps::ModuleDeps> ClangModuleDeps) {
+  const auto ClangModuleDepsCount = ClangModuleDeps.size();
   SmallVector<CC1JobNode *> NewNodes(ClangModuleDepsCount);
   for (size_t I = 0; I != ClangModuleDepsCount; ++I) {
-    auto *NewNode = new CC1JobNode(nullptr);
+    auto *NewNode = Graph.makeNode<CC1JobNode>(nullptr);
     Graph.addNode(*NewNode);
     NewNodes[I] = NewNode;
   }
   return NewNodes;
 }
 
-/// Returns true if the -cc1 job \p Job is eligible as a dependency scan input.
+/// Returns true if the -cc1 job \p Job is eligible as a dependency scan
+/// input.
 ///
-/// A job is eligible if it is a clang -cc1 job and its first input is a source
-/// file.
+/// A job is eligible if it is a clang -cc1 job and its first input is a
+/// source file.
 static bool isEligibleScanInput(const Command &CC1Job) {
   assert(isCC1Job(CC1Job) && "Input job must be -cc1!");
   const auto &InputInfos = CC1Job.getInputInfos();
@@ -828,9 +842,10 @@ static void pruneUnimportedStdlibModuleJobs(
         llvm::append_range(ImageToDeadJobs[ImageNode], Visited);
   }
 
-  // Remove outputs of jobs we are deleting from any downstream image-producing
-  // jobs before deletion. Image-producing jobs are never deleted, since at
-  // least one job originating from a user-provided input must feed into them.
+  // Remove outputs of jobs we are deleting from any downstream
+  // image-producing jobs before deletion. Image-producing jobs are never
+  // deleted, since at least one job originating from a user-provided input
+  // must feed into them.
   for (auto &[ImageNode, DeadJobNodes] : ImageToDeadJobs) {
     SmallVector<StringRef, 2> OutputsToRemove;
     for (auto *DeadNode : DeadJobNodes)
@@ -843,30 +858,31 @@ static void pruneUnimportedStdlibModuleJobs(
     });
     ImageNode->Job->replaceArguments(NewArgs);
 
-    for (auto *Job : DeadJobNodes) {
-      Graph.removeAndDeleteNode(*Job);
+    for (auto *DeadNode : DeadJobNodes) {
+      cast<JobNode>(DeadNode)->Job.reset();
+      Graph.removeNode(*DeadNode);
     }
   }
 
-  // Remove the dangling pointers.
   for (auto &&[Node, Deps] : llvm::zip_equal(ScanInputNodes, InputDeps))
     if (!Deps)
       Node = nullptr;
 }
 
-/// Adds a module-dependency edge from the dependency node in \p Lookup keyed by
-/// \p Key to \p DependentNode, if any.
-template <typename MapT, typename KeyT>
-static void connectModuleDependencyEdges(CompilationGraph &Graph,
-                                         CGNode &DependentNode,
-                                         const MapT &Lookup, const KeyT &Key) {
-  const auto It = Lookup.find(Key);
-  // Missing dependencies are diagnosed during compile-job execution.
-  if (It == Lookup.end())
-    return;
+template <typename MapT, typename KeyRangeT>
+static void
+connectModuleDepEdges(CompilationGraph &Graph, CGNode &ImportingNode,
+                      const KeyRangeT &DepRange, const MapT &Lookup) {
+  for (const auto &DepID : DepRange) {
+    const auto It = Lookup.find(DepID);
+    // Missing dependencies are diagnosed during compile-job execution.
+    if (It == Lookup.end())
+      continue;
 
-  auto *E = new CGEdge(DependentNode, CGEdge::EdgeKind::ModuleDependency);
-  Graph.connect(*It->second, DependentNode, *E);
+    auto &DependencyNode = *It->second;
+    auto *E = Graph.makeEdge(ImportingNode, CGEdge::EdgeKind::ModuleDependency);
+    Graph.connect(DependencyNode, ImportingNode, *E);
+  }
 }
 
 /// Applies the dependency scan results to the compilation graph.
@@ -883,24 +899,23 @@ static bool addModuleDependencyInfo(
   llvm::DenseMap<std::pair<StringRef, StringRef>, CC1JobNode *>
       NamedModuleLookup;
 
-  for (auto &&[ClangModuleNode, ModuleDeps] :
-       llvm::zip_equal(ClangModuleNodes, ScanResults.ModuleDeps)) {
-    ClangModuleNode->DependencyInfo = &ModuleDeps;
+  for (auto &&[ClangModuleNode, MD] :
+       llvm::zip_equal(ClangModuleNodes, ScanResults.DiscoveredModuleDeps)) {
+    ClangModuleNode->setScanResult(&MD);
     const bool Inserted =
-        ClangModuleLookup.try_emplace(ModuleDeps.ID, ClangModuleNode).second;
+        ClangModuleLookup.try_emplace(MD.ID, ClangModuleNode).second;
     assert(Inserted &&
            "Expected ScanResults to only contain unique ModuleDeps!");
   }
 
-  bool HasDuplicateModuleError = false;
-  for (auto &&[ScanInputNode, InputDeps] :
-       llvm::zip_equal(ScanInputNodes, ScanResults.InputDeps)) {
-    // Skip previously deleted nodes.
-    if (!InputDeps)
-      continue;
+  auto ScannedInputsWithDeps = llvm::make_filter_range(
+      llvm::zip_equal(ScanInputNodes, ScanResults.InputDepsByInput),
+      [](const auto &P) { return std::get<1>(P).has_value(); });
 
-    ScanInputNode->DependencyInfo = &*InputDeps;
-    if (ScanInputNode->isNonModule())
+  bool HasDuplicateModuleError = false;
+  for (auto &&[ScanInputNode, InputDeps] : ScannedInputsWithDeps) {
+    ScanInputNode->setScanResult(&*InputDeps);
+    if (ScanInputNode->getDepsKind() == CC1JobNode::DepUnitKind::NonModule)
       continue;
 
     StringRef Triple = getTriple(*ScanInputNode->Job);
@@ -921,33 +936,27 @@ static bool addModuleDependencyInfo(
 
   // Connect the dependencies of all Clang module nodes.
   for (auto &&[DependentNode, ModuleDeps] :
-       llvm::zip_equal(ClangModuleNodes, ScanResults.ModuleDeps)) {
-    for (const deps::ModuleID &DepID : ModuleDeps.ClangModuleDeps)
-      connectModuleDependencyEdges(Graph, *DependentNode, ClangModuleLookup,
-                                   DepID);
-  }
+       llvm::zip_equal(ClangModuleNodes, ScanResults.DiscoveredModuleDeps))
+    connectModuleDepEdges(Graph, *DependentNode, ModuleDeps.ClangModuleDeps,
+                          ClangModuleLookup);
 
   // Connect the dependencies of all non-module / C++20 named module nodes.
-  for (auto &&[DependentNode, InputDeps] :
-       llvm::zip_equal(ScanInputNodes, ScanResults.InputDeps)) {
-    // Skip previously deleted nodes.
-    if (!InputDeps)
-      continue;
+  for (auto &&[ConsumerNode, InputDeps] : ScannedInputsWithDeps) {
+    connectModuleDepEdges(Graph, *ConsumerNode, InputDeps->ClangModuleDeps,
+                          ClangModuleLookup);
 
-    for (const deps::ModuleID &DepID : InputDeps->ClangModuleDeps)
-      connectModuleDependencyEdges(Graph, *DependentNode, ClangModuleLookup,
-                                   DepID);
-
-    const auto &Triple = getTriple(*DependentNode->Job);
-    for (const auto &DepName : InputDeps->NamedModuleDeps) {
-      connectModuleDependencyEdges(Graph, *DependentNode, NamedModuleLookup,
-                                   std::make_pair(DepName, Triple));
-    }
+    StringRef Triple = getTriple(*ConsumerNode->Job);
+    auto NamedDepsWithTriple =
+        llvm::map_range(InputDeps->NamedModuleDeps, [&](StringRef DepName) {
+          return std::make_pair(DepName, Triple);
+        });
+    connectModuleDepEdges(Graph, *ConsumerNode, NamedDepsWithTriple,
+                          NamedModuleLookup);
   }
 
   // Pointers stay stable because the vector is moved into storage and never
   // resized thereafter.
-  Graph.storeDependencyInfo(std::move(ScanResults));
+  Graph.storeScanResults(std::move(ScanResults));
   return true;
 }
 
@@ -963,14 +972,14 @@ static void createAndConnectRootNode(CompilationGraph &Graph) {
 
   auto NodesWithoutRoot = llvm::iterator_range(Graph);
 
-  auto *Root = new RootNode();
+  auto *Root = Graph.makeNode<RootNode>();
   Graph.addNode(*Root);
   Graph.setRoot(Root);
 
   for (auto *N : NodesWithoutRoot) {
     if (HasIncomingEdge.contains(N))
       continue;
-    auto *E = new CGEdge(*N, CGEdge::EdgeKind::Rooted);
+    auto *E = Graph.makeEdge(*N, CGEdge::EdgeKind::Rooted);
     Graph.connect(*Root, *N, *E);
   }
 }
@@ -1167,8 +1176,8 @@ SourceManager &StandaloneDiagReporter::getSourceManager() const {
 
 namespace {
 
-/// Collects the results of DependencyScanningWorker calls from multiple threads
-/// into deterministically ordered scan results and diagnostics.
+/// Collects the results of DependencyScanningWorker calls from multiple
+/// threads into deterministically ordered scan results and diagnostics.
 class ScanResultCollector {
 public:
   explicit ScanResultCollector(size_t NumInputs)
@@ -1178,8 +1187,7 @@ public:
   /// InputIndex.
   ///
   /// Thread safe, given that each index is written to at most once.
-  void handleTUDeps(deps::TranslationUnitDeps &&TUDeps, StringRef Triple,
-                    size_t InputIndex);
+  void handleTUDeps(deps::TranslationUnitDeps &&TUDeps, size_t InputIndex);
 
   /// Records the diagnostics produced by the scan for the input at
   /// \p InputIndex.
@@ -1208,7 +1216,7 @@ private:
 } // anonymous namespace
 
 void ScanResultCollector::handleTUDeps(deps::TranslationUnitDeps &&TUDeps,
-                                       StringRef Triple, size_t InputIndex) {
+                                       size_t InputIndex) {
   assert(!InputDeps[InputIndex].has_value() &&
          "Each slot should be written to at most once.");
   InputDeps[InputIndex].emplace();
@@ -1216,6 +1224,7 @@ void ScanResultCollector::handleTUDeps(deps::TranslationUnitDeps &&TUDeps,
   NewInputDep.ModuleName = std::move(TUDeps.ID.ModuleName);
   NewInputDep.NamedModuleDeps = std::move(TUDeps.NamedModuleDeps);
   NewInputDep.ClangModuleDeps = std::move(TUDeps.ClangModuleDeps);
+  NewInputDep.FileDeps = std::move(TUDeps.FileDeps);
   assert(TUDeps.Commands.size() == 1 && "Expected exactly one command");
   NewInputDep.BuildArgs = TUDeps.Commands.front().Arguments;
 
@@ -1242,11 +1251,11 @@ DependencyScanResults ScanResultCollector::takeScanResults() {
       auto [It, Inserted] = AlreadySeen.insert(MD.ID);
       if (!Inserted)
         continue;
-      Results.ModuleDeps.push_back(std::move(MD));
+      Results.DiscoveredModuleDeps.push_back(std::move(MD));
     }
   }
 
-  Results.InputDeps = std::move(InputDeps);
+  Results.InputDepsByInput = std::move(InputDeps);
   return Results;
 }
 
@@ -1377,15 +1386,14 @@ scanDependenciesForJob(const Command &Job, ScanningWorkerPool &WorkerPool,
 
 /// Scans the given range of -cc1 jobs for module dependencies.
 ///
-/// Inputs for standard library modules are scanned on demand if imported by any
-/// user-provided input. The association between user and standard library
+/// Inputs for standard library modules are scanned on demand if imported by
+/// any user-provided input. The association between user and standard library
 /// inputs is provided by \p InputContext.
 ///
 /// \returns the dependency scan result, or std::nullopt on failure, with all
 /// diagnostics reported to \p Diags in both cases.
-template <typename JobRange>
 static std::optional<DependencyScanResults> scanDependencies(
-    const JobRange &ScanInputs, const ScanInputContext &InputContext,
+    ArrayRef<CC1JobNode *> ScanCC1Nodes, const ScanInputContext &InputContext,
     StringRef ModuleCachePath, IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
     DiagnosticsEngine &Diags) {
   llvm::PrettyStackTraceString CrashInfo("Performing module dependency scan.");
@@ -1394,7 +1402,7 @@ static std::optional<DependencyScanResults> scanDependencies(
       deps::ScanningMode::DependencyDirectivesScan,
       deps::ScanningOutputFormat::Full);
 
-  const size_t NumInputs = llvm::size(ScanInputs);
+  const size_t NumInputs = llvm::size(ScanCC1Nodes);
   const bool HasStdlibInputs = !InputContext.StdlibInputLookup.empty();
 
   auto ThreadAndWorkerPool = createOptimalThreadAndWorkerPool(
@@ -1412,7 +1420,7 @@ static std::optional<DependencyScanResults> scanDependencies(
   // module imports.
   std::function<void(size_t)> ScanOneAndScheduleNew;
   ScanOneAndScheduleNew = [&](size_t InputIndex) {
-    const Command &InputJob = *(ScanInputs.begin() + InputIndex);
+    const Command &InputJob = *ScanCC1Nodes[InputIndex]->Job;
     auto [MaybeTUDeps, Diags] =
         scanDependenciesForJob(InputJob, WorkerPool, LookupController);
 
@@ -1434,7 +1442,7 @@ static std::optional<DependencyScanResults> scanDependencies(
           [&, NewInputIndex]() { ScanOneAndScheduleNew(NewInputIndex); });
     }
 
-    ResultCollector.handleTUDeps(std::move(*MaybeTUDeps), Triple, InputIndex);
+    ResultCollector.handleTUDeps(std::move(*MaybeTUDeps), InputIndex);
   };
 
   // Initiate the dependency scan with all user inputs.
@@ -1468,41 +1476,39 @@ void driver::modules::runModulesDriver(
 
   CompilationGraph Graph = createGraphFromJobs(C.getJobs().takeJobs());
 
-  // Build the list of scan inputs and the associated context and for any jobs
-  // corresponding to manifest entries, apply the specified manifest-specified
-  // local-arguments.
-  const auto CC1Nodes =
-      llvm::map_range(llvm::make_filter_range(Graph, llvm::IsaPred<CC1JobNode>),
-                      llvm::CastTo<CC1JobNode>);
+  // Build the list of scan inputs and their associated context. For jobs that
+  // correspond to manifest entries, apply the manifest's local arguments.
   const auto ManifestLookup = createManifestLookupMap(ManifestEntries);
   SmallVector<CC1JobNode *> ScanInputNodes;
   ScanInputContext InputContext;
-  for (auto *CC1Node : CC1Nodes) {
-    auto &CC1Job = *CC1Node->Job;
-    if (auto *ManifestEntry = getManifestEntryForJob(CC1Job, ManifestLookup)) {
+
+  for (auto *N : Graph) {
+    auto *CC1Node = dyn_cast<CC1JobNode>(N);
+    if (!CC1Node)
+      continue;
+
+    auto &CC1Job = CC1Node->Job;
+    if (auto *ManifestEntry = getManifestEntryForJob(*CC1Job, ManifestLookup)) {
       if (const auto LocalArgs = ManifestEntry->LocalArgs)
-        addSystemIncludeDirsFromManifest(C, CC1Job,
+        addSystemIncludeDirsFromManifest(C, *CC1Job,
                                          LocalArgs->SystemIncludeDirs);
-      if (isEligibleScanInput(CC1Job)) {
+      if (isEligibleScanInput(*CC1Job)) {
         const size_t InputIndex = ScanInputNodes.size();
         ScanInputNodes.push_back(CC1Node);
 
-        StringRef Triple = getTriple(CC1Job);
+        StringRef Triple = getTriple(*CC1Job);
         InputContext.StdlibInputLookup.try_emplace(
             {ManifestEntry->LogicalName, Triple}, InputIndex);
       }
-    } else if (isEligibleScanInput(CC1Job)) {
+    } else if (isEligibleScanInput(*CC1Job)) {
       const size_t InputIndex = ScanInputNodes.size();
       ScanInputNodes.push_back(CC1Node);
       InputContext.UserInputIndices.push_back(InputIndex);
     }
   }
 
-  const auto ScanInputJobs = llvm::map_range(
-      ScanInputNodes,
-      [](const auto *CC1Node) -> const Command & { return *CC1Node->Job; });
   auto MaybeScanResults =
-      scanDependencies(ScanInputJobs, InputContext, *MaybeModuleCachePath,
+      scanDependencies(ScanInputNodes, InputContext, *MaybeModuleCachePath,
                        &C.getDriver().getVFS(), Diags);
   if (!MaybeScanResults) {
     Diags.Report(diag::err_dependency_scan_failed);
@@ -1510,12 +1516,12 @@ void driver::modules::runModulesDriver(
   }
 
   pruneUnimportedStdlibModuleJobs(Graph, ScanInputNodes,
-                                  MaybeScanResults->InputDeps);
+                                  MaybeScanResults->InputDepsByInput);
 
   // TODO: Generate -cc1 jobs for each Clang module and pass in the jobs here
   // instead.
   auto ClangModuleNodes =
-      createClangModuleNodes(Graph, MaybeScanResults->ModuleDeps.size());
+      createClangModuleNodes(Graph, MaybeScanResults->DiscoveredModuleDeps);
   const bool Success =
       addModuleDependencyInfo(Graph, ScanInputNodes, ClangModuleNodes,
                               std::move(*MaybeScanResults), Diags);
@@ -1528,8 +1534,8 @@ void driver::modules::runModulesDriver(
   if (!Diags.isLastDiagnosticIgnored())
     llvm::WriteGraph<const CompilationGraph *>(llvm::errs(), &Graph);
 
-  // TODO: Update each driver job's command line to emit or pass-in the correct
-  // module files.
+  // TODO: Update each driver job's command line to emit or pass-in the
+  // correct module files.
 
   // TODO: Topologically sort the graph and merge the jobs back into the
   // compilation's job list.

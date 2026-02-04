@@ -16,7 +16,6 @@
 // RUN:   %t/Inputs/usr/lib/x86_64-linux-gnu/libc++.modules.json
 
 // RUN: mkdir -p %t/Inputs/usr/lib/share/libc++/v1
-// RUN: mkdir -p %t/Inputs/usr/lib/share/libc++/v2
 // RUN: cat %t/std.cppm > %t/Inputs/usr/lib/share/libc++/v1/std.cppm
 // RUN: cat %t/std.compat.cppm > %t/Inputs/usr/lib/share/libc++/v1/std.compat.cppm
 // RUN: cat %t/core.cppm > %t/Inputs/usr/lib/share/core.cppm
@@ -34,13 +33,12 @@
 // RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:      digraph "Module Dependency Graph" {
-// CHECK-NEXT:         label="Module Dependency Graph";
 //
 // CHECK:              "[[PREFIX]]/main.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: [[PREFIX]]/main.cpp | Triple: x86_64-unknown-linux-gnu }"];
 // CHECK-NEXT:         "[[PREFIX]]/foo.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: [[PREFIX]]/foo.cpp | Triple: x86_64-unknown-linux-gnu }"];
-// CHECK-NEXT:         "std-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Module type: Named module | Module name: std | Triple: x86_64-unknown-linux-gnu }"];
-// CHECK-NEXT:         "std.compat-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Module type: Named module | Module name: std.compat | Triple: x86_64-unknown-linux-gnu }"];
-// CHECK-NEXT:         "core-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Module type: Named module | Module name: core | Triple: x86_64-unknown-linux-gnu }"];
+// CHECK-NEXT:         "std-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: {{.*}} | Module type: Named module | Module name: std | Triple: x86_64-unknown-linux-gnu }"];
+// CHECK-NEXT:         "std.compat-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: {{.*}} | Module type: Named module | Module name: std.compat | Triple: x86_64-unknown-linux-gnu }"];
+// CHECK-NEXT:         "core-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: {{.*}} | Module type: Named module | Module name: core | Triple: x86_64-unknown-linux-gnu }"];
 //
 // CHECK:              "std-x86_64-unknown-linux-gnu" -> "[[PREFIX]]/main.cpp-x86_64-unknown-linux-gnu";
 // CHECK-NEXT:         "std-x86_64-unknown-linux-gnu" -> "[[PREFIX]]/foo.cpp-x86_64-unknown-linux-gnu";
