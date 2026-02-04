@@ -3190,8 +3190,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   AtomicRMWState RMWState = AtomicRMWState::NotInBlock;
 
   // NOTE: we may erase Inst and/or may append instrs after Inst while iterating
-  for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin();
-       Iter != Block.instr_end(); ++Iter) {
+  for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
+                                         E = Block.instr_end();
+       Iter != E; ++Iter) {
     MachineInstr &Inst = *Iter;
     if (Inst.isMetaInstruction())
       continue;
@@ -3215,8 +3216,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
       if (IsSoftXcnt && RMWState == AtomicRMWState::InsideBlock) {
         // Delete this soft xcnt.
-        --Iter;
+        auto NextIt = std::next(Iter);
         Inst.eraseFromParent();
+        Iter = std::prev(NextIt);
         Modified = true;
       } else if (!OldWaitcntInstr) {
         OldWaitcntInstr = &Inst;
