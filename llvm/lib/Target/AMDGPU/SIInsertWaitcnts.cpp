@@ -3189,11 +3189,12 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   MachineInstr *OldWaitcntInstr = nullptr;
   AtomicRMWState RMWState = AtomicRMWState::NotInBlock;
 
-  // NOTE: we may erase Inst and/or may append instrs after Inst while iterating
+  // NOTE: we may erase Inst and/or append instrs after Inst while iterating
   for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
                                          E = Block.instr_end();
-       Iter != E; ++Iter) {
-    MachineInstr &Inst = *Iter;
+       Iter != E;) {
+    // Early increment Iter because we may erase Inst while iterating.
+    MachineInstr &Inst = *Iter++;
     if (Inst.isMetaInstruction())
       continue;
     // Get the atomic RMW block state for current instruction.
@@ -3216,9 +3217,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
       if (IsSoftXcnt && RMWState == AtomicRMWState::InsideBlock) {
         // Delete this soft xcnt.
-        auto NextIt = std::next(Iter);
         Inst.eraseFromParent();
-        Iter = std::prev(NextIt);
         Modified = true;
       } else if (!OldWaitcntInstr) {
         OldWaitcntInstr = &Inst;
@@ -3291,6 +3290,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
 
     Modified |= insertForcedWaitAfter(Inst, Block, ScoreBrackets);
+    // Note: insertForcedWaitAfter() may add instrs after Iter that need to be
+    // visited by the loop, so we need to overwrite Iter here.
+    Iter = std::next(Inst.getIterator());
 
     LLVM_DEBUG({
       Inst.print(dbgs());
