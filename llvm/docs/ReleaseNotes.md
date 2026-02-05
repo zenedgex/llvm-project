@@ -63,6 +63,11 @@ Changes to the LLVM IR
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.
 
+* Added `global-asm-symbols` and `global-asm-symvers` module flags to
+  keep a list of symbols and symvers defined in global inline
+  assembly. This allows LLVM tools to build a symbol table for a
+  module without running AsmParser to find symbols in assembly.
+
 Changes to LLVM infrastructure
 ------------------------------
 
