@@ -443,6 +443,18 @@
 #CHECK-LE: paddis 10, 0, 1000000000      # encoding: [0x9a,0x3b,0x00,0x06,
 #CHECK-LE-SAME:                                       0x00,0xca,0x40,0x3d]
 
+           psubis 10, 1000000000
+#CHECK-BE: paddis 10, 0, -1000000000     # encoding: [0x06,0x00,0xc4,0x65,
+#CHECK-BE-SAME:                                       0x3d,0x40,0x36,0x00]
+#CHECK-LE: paddis 10, 0, -1000000000     # encoding: [0x65,0xc4,0x00,0x06,
+#CHECK-LE-SAME:                                       0x00,0x36,0x40,0x3d]
+
+           psubis 10, -1000000000
+#CHECK-BE: paddis 10, 0, 1000000000      # encoding: [0x06,0x00,0x3b,0x9a,
+#CHECK-BE-SAME:                                       0x3d,0x40,0xca,0x00]
+#CHECK-LE: paddis 10, 0, 1000000000      # encoding: [0x9a,0x3b,0x00,0x06,
+#CHECK-LE-SAME:                                       0x00,0xca,0x40,0x3d]
+
            xxmulmul 8, 3, 4, 2
 #CHECK-BE: xxmulmul 8, 3, 4, 2          # encoding: [0xed,0x03,0x22,0x08]
 #CHECK-LE: xxmulmul 8, 3, 4, 2          # encoding: [0x08,0x22,0x03,0xed]
