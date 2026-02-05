@@ -147,6 +147,9 @@ defm s5imm : SignedImmediate<i32,
   [{ return isInt<5>(Imm); }], NOOP_SDNodeXForm,
   "S5Imm", 5>;
 
+defm s32imm : SignedImmediate<i32,
+  [{ return isInt<32>(Imm); }], NOOP_SDNodeXForm,
+  "S32Imm", 32, "PPC::fixup_ppc_imm32">;
 defm s34imm : SignedImmediate<i32,
   [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
   "S34Imm", 34, "PPC::fixup_ppc_imm34">;

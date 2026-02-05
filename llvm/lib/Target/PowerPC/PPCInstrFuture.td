@@ -608,9 +608,9 @@ let Predicates = [HasVSX, IsISAFuture] in {
 def : InstAlias<"paddis $RT, $RA, $SI", (PADDIS gprc:$RT, gprc_nor0:$RA,
                                             s32imm:$SI)>;
 def : InstAlias<"paddis $RT, $RA, $SI", (PADDIS8 g8rc:$RT, g8rc_nox0:$RA,
-                                            s32imm:$SI)>;
+                                            s32imm64:$SI)>;
 def : InstAlias<"plis $RT, $SI", (PADDIS gprc:$RT, ZERO, s32imm:$SI)>;
-def : InstAlias<"plis $RT, $SI", (PADDIS8 g8rc:$RT, ZERO8, s32imm:$SI)>;
+def : InstAlias<"plis $RT, $SI", (PADDIS8 g8rc:$RT, ZERO8, s32imm64:$SI)>;
 
 let Predicates = [HasVSX, IsISAFuture] in {
   def : InstAlias<"xxaes128encp $XTp, $XAp, $XBp",
