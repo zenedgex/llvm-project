@@ -334,11 +334,14 @@ void PPCInstPrinter::printUImmOperand(const MCInst *MI, unsigned OpNo,
   O << (unsigned int)Value;
 }
 
-void PPCInstPrinter::printS5ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Template for signed immediate operands with sign extension.
+// Sign-extends the value to the specified width and prints it.
+template<unsigned Width>
+void PPCInstPrinter::printSImmOperand(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   int Value = MI->getOperand(OpNo).getImm();
-  Value = SignExtend32<5>(Value);
+  Value = SignExtend32<Width>(Value);
   O << (int)Value;
 }
 

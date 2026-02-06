@@ -61,8 +61,11 @@ public:
   void printUImmOperand(const MCInst *MI, unsigned OpNo,
                         const MCSubtargetInfo &STI, raw_ostream &O);
 
-  void printS5ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
+  // Template for signed immediate operands with sign extension
+  template<unsigned Width>
+  void printSImmOperand(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
+
   void printU8ImmOperandTrunc(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printS16ImmOperand(const MCInst *MI, unsigned OpNo,
