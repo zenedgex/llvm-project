@@ -11915,7 +11915,7 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
     SDValue FpToInt = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT,
                                   dl, DstVT, Clamped);
 
-    // If !MayPropagateNan and the conversion is unsigned case we're done,
+    // If !MayPropagateNaN and the conversion is unsigned case we're done,
     // because we mapped NaN to MinFloat, which will cast to zero.
     if (!MayPropagateNaN && !IsSigned)
       return FpToInt;
