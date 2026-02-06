@@ -63,33 +63,34 @@ class UImmediateRelocOp<ValueType vt, string asmop, int width, string fixup,
 // (AsmOperand + Operand + ImmLeaf).
 //===----------------------------------------------------------------------===//
 
-multiclass SignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
-                           string asmop, int width > {
-  def "" : ImmediateOp<vt, asmop, width>;
+multiclass ImmPatterns<ValueType vt, code pred, SDNodeXForm xform> {
   def _pat : ImmLeaf<vt, pred, xform>;
   def _timm : TImmLeaf<vt, pred, xform>;
+}
+
+multiclass SignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
+                           string asmop, int width >
+    : ImmPatterns<vt, pred, xform> {
+  def "" : ImmediateOp<vt, asmop, width>;
 }
 
 multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
-                             string asmop, int width > {
+                             string asmop, int width >
+    : ImmPatterns<vt, pred, xform> {
   def "" : UImmediateOp<vt, asmop, width>;
-  def _pat : ImmLeaf<vt, pred, xform>;
-  def _timm : TImmLeaf<vt, pred, xform>;
 }
 
 multiclass SignedImmediateReloc<ValueType vt, code pred, SDNodeXForm xform,
-                                string asmop, int width, string fixup> {
+                                string asmop, int width, string fixup>
+    : ImmPatterns<vt, pred, xform> {
   def "" : ImmediateRelocOp<vt, asmop, width, fixup>;
-  def _pat : ImmLeaf<vt, pred, xform>;
-  def _timm : TImmLeaf<vt, pred, xform>;
 }
 
 // Helper multiclass for unsigned immediates with relocation fixup string.
 multiclass UnsignedImmediateReloc<ValueType vt, code pred, SDNodeXForm xform,
-                                  string asmop, int width, string fixup> {
+                                  string asmop, int width, string fixup>
+    : ImmPatterns<vt, pred, xform> {
   def "" : UImmediateRelocOp<vt, asmop, width, fixup>;
-  def _pat : ImmLeaf<vt, pred, xform>;
-  def _timm : TImmLeaf<vt, pred, xform>;
 }
 
 // Multiclass for signed immediate operands with both regular and
