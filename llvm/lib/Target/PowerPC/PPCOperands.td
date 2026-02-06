@@ -26,7 +26,9 @@ class ImmediateAsmOperand<string predicate, string render="addImmOperands">
 // Base class for immediate operands with optional encoder.
 class ImmediateOp<ValueType vt, string asmop, int width, bit is_signed = 0,
                   string encoder = "", string decoder = ""> : Operand<vt> {
-  let PrintMethod = "print"#asmop#"Operand";
+  let PrintMethod = !if(is_signed,
+                        "print"#asmop#"Operand",
+                        "printUImmOperand<"#width#">");
   let ParserMatchClass = !cast<AsmOperandClass>(asmop);
   let OperandType = "OPERAND_IMMEDIATE";
 
@@ -136,6 +138,14 @@ defm u7imm : UnsignedImmediate<i32,
 defm u8imm : UnsignedImmediate<i32,
   [{ return isUInt<8>(Imm); }], NOOP_SDNodeXForm,
   "U8Imm", 8>;
+
+// Truncating version for BUILD_VECTOR operands that may be sign-extended.
+// Uses the same parser class as u8imm but with a truncating print method.
+def u8imm_trunc : Operand<i32> {
+  let PrintMethod = "printU8ImmOperandTrunc";
+  let ParserMatchClass = U8Imm;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 defm u10imm : UnsignedImmediate<i32,
   [{ return isUInt<10>(Imm); }], NOOP_SDNodeXForm,
   "U10Imm", 10>;
