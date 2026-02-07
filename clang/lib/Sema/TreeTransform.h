@@ -7731,8 +7731,9 @@ QualType TreeTransform<Derived>::TransformCountAttributedType(
 }
 
 template <typename Derived>
-QualType TreeTransform<Derived>::TransformLateParsedAttrType(
-    TypeLocBuilder &TLB, LateParsedAttrTypeLoc TL) {
+QualType
+TreeTransform<Derived>::TransformLateParsedAttrType(TypeLocBuilder &TLB,
+                                                    LateParsedAttrTypeLoc TL) {
   const LateParsedAttrType *OldTy = TL.getTypePtr();
   QualType InnerTy = getDerived().TransformType(TLB, TL.getInnerLoc());
   if (InnerTy.isNull())
