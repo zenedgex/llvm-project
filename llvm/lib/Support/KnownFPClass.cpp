@@ -342,19 +342,19 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   if (!KnownLHS.isKnownNeverNaN() || !KnownRHS.isKnownNeverNaN())
     return Known;
 
-  if (KnownLHS.SignBit && KnownRHS.SignBit) {
-    if (*KnownLHS.SignBit == *KnownRHS.SignBit)
-      Known.signBitMustBeZero();
-    else
-      Known.signBitMustBeOne();
-  }
-
   // If 0 * +/-inf produces NaN.
   if ((KnownRHS.isKnownNeverInfinity() ||
        KnownLHS.isKnownNeverLogicalZero(Mode)) &&
       (KnownLHS.isKnownNeverInfinity() ||
        KnownRHS.isKnownNeverLogicalZero(Mode)))
     Known.knownNot(fcNan);
+
+  if (KnownLHS.SignBit && KnownRHS.SignBit && Known.isKnownNeverNaN()) {
+    if (*KnownLHS.SignBit == *KnownRHS.SignBit)
+      Known.signBitMustBeZero();
+    else
+      Known.signBitMustBeOne();
+  }
 
   return Known;
 }
