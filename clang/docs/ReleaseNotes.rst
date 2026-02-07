@@ -211,6 +211,19 @@ Improvements to Clang's diagnostics
 
 - Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
 
+- ``-Wpointer-bool-conversion`` will now also warn in the following case
+
+  .. code-block:: c
+
+    struct B {
+      B(bool V) {}
+    };
+    void test(const B& b);
+    void test0(B* b) {
+      test(b); // this will call B::B(bool) and create a new B
+    }
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 
