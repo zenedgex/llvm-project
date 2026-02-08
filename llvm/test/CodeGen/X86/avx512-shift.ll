@@ -218,3 +218,393 @@ define <8 x i64> @variable_srl3_load(<8 x i64> %x, ptr %y) {
   %k = lshr <8 x i64> %x, %y1
   ret <8 x i64> %k
 }
+
+define i512 @lshr_i512(ptr %x, ptr %shift) {
+; KNL-LABEL: lshr_i512:
+; KNL:       # %bb.0:
+; KNL-NEXT:    pushq %r15
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:    pushq %r14
+; KNL-NEXT:    .cfi_def_cfa_offset 24
+; KNL-NEXT:    pushq %rbx
+; KNL-NEXT:    .cfi_def_cfa_offset 32
+; KNL-NEXT:    .cfi_offset %rbx, -32
+; KNL-NEXT:    .cfi_offset %r14, -24
+; KNL-NEXT:    .cfi_offset %r15, -16
+; KNL-NEXT:    vmovups (%rsi), %zmm0
+; KNL-NEXT:    movl (%rdx), %eax
+; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl %eax, %ecx
+; KNL-NEXT:    andl $63, %ecx
+; KNL-NEXT:    shrl $3, %eax
+; KNL-NEXT:    andl $56, %eax
+; KNL-NEXT:    movq -112(%rsp,%rax), %rdx
+; KNL-NEXT:    movq -120(%rsp,%rax), %r9
+; KNL-NEXT:    movq %r9, %rsi
+; KNL-NEXT:    shrdq %cl, %rdx, %rsi
+; KNL-NEXT:    movq -104(%rsp,%rax), %r8
+; KNL-NEXT:    shrdq %cl, %r8, %rdx
+; KNL-NEXT:    movq -96(%rsp,%rax), %r10
+; KNL-NEXT:    shrdq %cl, %r10, %r8
+; KNL-NEXT:    movq -88(%rsp,%rax), %r11
+; KNL-NEXT:    shrdq %cl, %r11, %r10
+; KNL-NEXT:    movq -80(%rsp,%rax), %rbx
+; KNL-NEXT:    shrdq %cl, %rbx, %r11
+; KNL-NEXT:    movq -128(%rsp,%rax), %r14
+; KNL-NEXT:    movq -72(%rsp,%rax), %r15
+; KNL-NEXT:    shrdq %cl, %r15, %rbx
+; KNL-NEXT:    shrdq %cl, %r9, %r14
+; KNL-NEXT:    movq %rdi, %rax
+; KNL-NEXT:    shrxq %rcx, %r15, %rcx
+; KNL-NEXT:    movq %rcx, 56(%rdi)
+; KNL-NEXT:    movq %rbx, 48(%rdi)
+; KNL-NEXT:    movq %r11, 40(%rdi)
+; KNL-NEXT:    movq %r10, 32(%rdi)
+; KNL-NEXT:    movq %r8, 24(%rdi)
+; KNL-NEXT:    movq %rdx, 16(%rdi)
+; KNL-NEXT:    movq %rsi, 8(%rdi)
+; KNL-NEXT:    movq %r14, (%rdi)
+; KNL-NEXT:    popq %rbx
+; KNL-NEXT:    .cfi_def_cfa_offset 24
+; KNL-NEXT:    popq %r14
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:    popq %r15
+; KNL-NEXT:    .cfi_def_cfa_offset 8
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: lshr_i512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    pushq %r15
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    pushq %r14
+; SKX-NEXT:    .cfi_def_cfa_offset 24
+; SKX-NEXT:    pushq %rbx
+; SKX-NEXT:    .cfi_def_cfa_offset 32
+; SKX-NEXT:    .cfi_offset %rbx, -32
+; SKX-NEXT:    .cfi_offset %r14, -24
+; SKX-NEXT:    .cfi_offset %r15, -16
+; SKX-NEXT:    vmovups (%rsi), %ymm0
+; SKX-NEXT:    vmovups 32(%rsi), %ymm1
+; SKX-NEXT:    movl (%rdx), %eax
+; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movl %eax, %ecx
+; SKX-NEXT:    andl $63, %ecx
+; SKX-NEXT:    shrl $3, %eax
+; SKX-NEXT:    andl $56, %eax
+; SKX-NEXT:    movq -112(%rsp,%rax), %rdx
+; SKX-NEXT:    movq -120(%rsp,%rax), %r9
+; SKX-NEXT:    movq %r9, %rsi
+; SKX-NEXT:    shrdq %cl, %rdx, %rsi
+; SKX-NEXT:    movq -104(%rsp,%rax), %r8
+; SKX-NEXT:    shrdq %cl, %r8, %rdx
+; SKX-NEXT:    movq -96(%rsp,%rax), %r10
+; SKX-NEXT:    shrdq %cl, %r10, %r8
+; SKX-NEXT:    movq -88(%rsp,%rax), %r11
+; SKX-NEXT:    shrdq %cl, %r11, %r10
+; SKX-NEXT:    movq -80(%rsp,%rax), %rbx
+; SKX-NEXT:    shrdq %cl, %rbx, %r11
+; SKX-NEXT:    movq -72(%rsp,%rax), %r14
+; SKX-NEXT:    shrdq %cl, %r14, %rbx
+; SKX-NEXT:    movq -128(%rsp,%rax), %r15
+; SKX-NEXT:    shrdq %cl, %r9, %r15
+; SKX-NEXT:    movq %rdi, %rax
+; SKX-NEXT:    shrxq %rcx, %r14, %rcx
+; SKX-NEXT:    movq %rcx, 56(%rdi)
+; SKX-NEXT:    movq %rbx, 48(%rdi)
+; SKX-NEXT:    movq %r11, 40(%rdi)
+; SKX-NEXT:    movq %r10, 32(%rdi)
+; SKX-NEXT:    movq %r8, 24(%rdi)
+; SKX-NEXT:    movq %rdx, 16(%rdi)
+; SKX-NEXT:    movq %rsi, 8(%rdi)
+; SKX-NEXT:    movq %r15, (%rdi)
+; SKX-NEXT:    popq %rbx
+; SKX-NEXT:    .cfi_def_cfa_offset 24
+; SKX-NEXT:    popq %r14
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    popq %r15
+; SKX-NEXT:    .cfi_def_cfa_offset 8
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %shiftval = load i512, ptr %x
+  %shiftamt = load i512, ptr %shift
+  %res = lshr i512 %shiftval, %shiftamt
+  ret i512 %res
+}
+
+define i512 @ashr_i512(ptr %x, ptr %shift) {
+; KNL-LABEL: ashr_i512:
+; KNL:       # %bb.0:
+; KNL-NEXT:    pushq %r15
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:    pushq %r14
+; KNL-NEXT:    .cfi_def_cfa_offset 24
+; KNL-NEXT:    pushq %rbx
+; KNL-NEXT:    .cfi_def_cfa_offset 32
+; KNL-NEXT:    .cfi_offset %rbx, -32
+; KNL-NEXT:    .cfi_offset %r14, -24
+; KNL-NEXT:    .cfi_offset %r15, -16
+; KNL-NEXT:    vmovups (%rsi), %ymm0
+; KNL-NEXT:    vmovaps 32(%rsi), %xmm1
+; KNL-NEXT:    movq 48(%rsi), %rcx
+; KNL-NEXT:    movq 56(%rsi), %rsi
+; KNL-NEXT:    movl (%rdx), %eax
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    sarq $63, %rsi
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl %eax, %ecx
+; KNL-NEXT:    andl $63, %ecx
+; KNL-NEXT:    shrl $3, %eax
+; KNL-NEXT:    andl $56, %eax
+; KNL-NEXT:    movq -112(%rsp,%rax), %rdx
+; KNL-NEXT:    movq -120(%rsp,%rax), %r9
+; KNL-NEXT:    movq %r9, %rsi
+; KNL-NEXT:    shrdq %cl, %rdx, %rsi
+; KNL-NEXT:    movq -104(%rsp,%rax), %r8
+; KNL-NEXT:    shrdq %cl, %r8, %rdx
+; KNL-NEXT:    movq -96(%rsp,%rax), %r10
+; KNL-NEXT:    shrdq %cl, %r10, %r8
+; KNL-NEXT:    movq -88(%rsp,%rax), %r11
+; KNL-NEXT:    shrdq %cl, %r11, %r10
+; KNL-NEXT:    movq -80(%rsp,%rax), %rbx
+; KNL-NEXT:    shrdq %cl, %rbx, %r11
+; KNL-NEXT:    movq -128(%rsp,%rax), %r14
+; KNL-NEXT:    movq -72(%rsp,%rax), %r15
+; KNL-NEXT:    shrdq %cl, %r15, %rbx
+; KNL-NEXT:    shrdq %cl, %r9, %r14
+; KNL-NEXT:    movq %rdi, %rax
+; KNL-NEXT:    sarxq %rcx, %r15, %rcx
+; KNL-NEXT:    movq %rcx, 56(%rdi)
+; KNL-NEXT:    movq %rbx, 48(%rdi)
+; KNL-NEXT:    movq %r11, 40(%rdi)
+; KNL-NEXT:    movq %r10, 32(%rdi)
+; KNL-NEXT:    movq %r8, 24(%rdi)
+; KNL-NEXT:    movq %rdx, 16(%rdi)
+; KNL-NEXT:    movq %rsi, 8(%rdi)
+; KNL-NEXT:    movq %r14, (%rdi)
+; KNL-NEXT:    popq %rbx
+; KNL-NEXT:    .cfi_def_cfa_offset 24
+; KNL-NEXT:    popq %r14
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:    popq %r15
+; KNL-NEXT:    .cfi_def_cfa_offset 8
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: ashr_i512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    pushq %r15
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    pushq %r14
+; SKX-NEXT:    .cfi_def_cfa_offset 24
+; SKX-NEXT:    pushq %rbx
+; SKX-NEXT:    .cfi_def_cfa_offset 32
+; SKX-NEXT:    .cfi_offset %rbx, -32
+; SKX-NEXT:    .cfi_offset %r14, -24
+; SKX-NEXT:    .cfi_offset %r15, -16
+; SKX-NEXT:    vmovups (%rsi), %ymm0
+; SKX-NEXT:    vmovaps 32(%rsi), %xmm1
+; SKX-NEXT:    movq 48(%rsi), %rcx
+; SKX-NEXT:    movq 56(%rsi), %rsi
+; SKX-NEXT:    movl (%rdx), %eax
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovaps %xmm1, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    sarq $63, %rsi
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movl %eax, %ecx
+; SKX-NEXT:    andl $63, %ecx
+; SKX-NEXT:    shrl $3, %eax
+; SKX-NEXT:    andl $56, %eax
+; SKX-NEXT:    movq -112(%rsp,%rax), %rdx
+; SKX-NEXT:    movq -120(%rsp,%rax), %r9
+; SKX-NEXT:    movq %r9, %rsi
+; SKX-NEXT:    shrdq %cl, %rdx, %rsi
+; SKX-NEXT:    movq -104(%rsp,%rax), %r8
+; SKX-NEXT:    shrdq %cl, %r8, %rdx
+; SKX-NEXT:    movq -96(%rsp,%rax), %r10
+; SKX-NEXT:    shrdq %cl, %r10, %r8
+; SKX-NEXT:    movq -88(%rsp,%rax), %r11
+; SKX-NEXT:    shrdq %cl, %r11, %r10
+; SKX-NEXT:    movq -80(%rsp,%rax), %rbx
+; SKX-NEXT:    shrdq %cl, %rbx, %r11
+; SKX-NEXT:    movq -72(%rsp,%rax), %r14
+; SKX-NEXT:    shrdq %cl, %r14, %rbx
+; SKX-NEXT:    movq -128(%rsp,%rax), %r15
+; SKX-NEXT:    shrdq %cl, %r9, %r15
+; SKX-NEXT:    movq %rdi, %rax
+; SKX-NEXT:    sarxq %rcx, %r14, %rcx
+; SKX-NEXT:    movq %rcx, 56(%rdi)
+; SKX-NEXT:    movq %rbx, 48(%rdi)
+; SKX-NEXT:    movq %r11, 40(%rdi)
+; SKX-NEXT:    movq %r10, 32(%rdi)
+; SKX-NEXT:    movq %r8, 24(%rdi)
+; SKX-NEXT:    movq %rdx, 16(%rdi)
+; SKX-NEXT:    movq %rsi, 8(%rdi)
+; SKX-NEXT:    movq %r15, (%rdi)
+; SKX-NEXT:    popq %rbx
+; SKX-NEXT:    .cfi_def_cfa_offset 24
+; SKX-NEXT:    popq %r14
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    popq %r15
+; SKX-NEXT:    .cfi_def_cfa_offset 8
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %shiftval = load i512, ptr %x
+  %shiftamt = load i512, ptr %shift
+  %res = ashr i512 %shiftval, %shiftamt
+  ret i512 %res
+}
+
+define i512 @shl_i512(ptr %x, ptr %shift) {
+; KNL-LABEL: shl_i512:
+; KNL:       # %bb.0:
+; KNL-NEXT:    pushq %r14
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:    pushq %rbx
+; KNL-NEXT:    .cfi_def_cfa_offset 24
+; KNL-NEXT:    pushq %rax
+; KNL-NEXT:    .cfi_def_cfa_offset 32
+; KNL-NEXT:    .cfi_offset %rbx, -24
+; KNL-NEXT:    .cfi_offset %r14, -16
+; KNL-NEXT:    vmovups (%rsi), %zmm0
+; KNL-NEXT:    movl (%rdx), %eax
+; KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; KNL-NEXT:    vmovups %zmm1, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    vmovups %zmm0, -{{[0-9]+}}(%rsp)
+; KNL-NEXT:    movl %eax, %ecx
+; KNL-NEXT:    andl $63, %ecx
+; KNL-NEXT:    shrl $3, %eax
+; KNL-NEXT:    andl $56, %eax
+; KNL-NEXT:    negl %eax
+; KNL-NEXT:    movslq %eax, %r8
+; KNL-NEXT:    movq -56(%rsp,%r8), %rdx
+; KNL-NEXT:    movq -48(%rsp,%r8), %rax
+; KNL-NEXT:    movq %rax, %rsi
+; KNL-NEXT:    shldq %cl, %rdx, %rsi
+; KNL-NEXT:    movq -40(%rsp,%r8), %r10
+; KNL-NEXT:    movq %r10, %r9
+; KNL-NEXT:    shldq %cl, %rax, %r9
+; KNL-NEXT:    movq -32(%rsp,%r8), %rax
+; KNL-NEXT:    movq %rax, %r11
+; KNL-NEXT:    shldq %cl, %r10, %r11
+; KNL-NEXT:    movq -24(%rsp,%r8), %r10
+; KNL-NEXT:    movq %r10, %rbx
+; KNL-NEXT:    shldq %cl, %rax, %rbx
+; KNL-NEXT:    movq -16(%rsp,%r8), %rax
+; KNL-NEXT:    movq %rax, %r14
+; KNL-NEXT:    shldq %cl, %r10, %r14
+; KNL-NEXT:    movq -8(%rsp,%r8), %r10
+; KNL-NEXT:    shldq %cl, %rax, %r10
+; KNL-NEXT:    movq %rdi, %rax
+; KNL-NEXT:    movq -64(%rsp,%r8), %rdi
+; KNL-NEXT:    shlxq %rcx, %rdi, %r8
+; KNL-NEXT:    # kill: def $cl killed $cl killed $rcx
+; KNL-NEXT:    shldq %cl, %rdi, %rdx
+; KNL-NEXT:    movq %r10, 56(%rax)
+; KNL-NEXT:    movq %r14, 48(%rax)
+; KNL-NEXT:    movq %rbx, 40(%rax)
+; KNL-NEXT:    movq %r11, 32(%rax)
+; KNL-NEXT:    movq %r9, 24(%rax)
+; KNL-NEXT:    movq %rsi, 16(%rax)
+; KNL-NEXT:    movq %rdx, 8(%rax)
+; KNL-NEXT:    movq %r8, (%rax)
+; KNL-NEXT:    addq $8, %rsp
+; KNL-NEXT:    .cfi_def_cfa_offset 24
+; KNL-NEXT:    popq %rbx
+; KNL-NEXT:    .cfi_def_cfa_offset 16
+; KNL-NEXT:    popq %r14
+; KNL-NEXT:    .cfi_def_cfa_offset 8
+; KNL-NEXT:    retq
+;
+; SKX-LABEL: shl_i512:
+; SKX:       # %bb.0:
+; SKX-NEXT:    pushq %r15
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    pushq %r14
+; SKX-NEXT:    .cfi_def_cfa_offset 24
+; SKX-NEXT:    pushq %rbx
+; SKX-NEXT:    .cfi_def_cfa_offset 32
+; SKX-NEXT:    .cfi_offset %rbx, -32
+; SKX-NEXT:    .cfi_offset %r14, -24
+; SKX-NEXT:    .cfi_offset %r15, -16
+; SKX-NEXT:    vmovups (%rsi), %ymm0
+; SKX-NEXT:    vmovups 32(%rsi), %ymm1
+; SKX-NEXT:    movl (%rdx), %eax
+; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovups %ymm2, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovups %ymm1, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
+; SKX-NEXT:    movl %eax, %ecx
+; SKX-NEXT:    andl $63, %ecx
+; SKX-NEXT:    shrl $3, %eax
+; SKX-NEXT:    andl $56, %eax
+; SKX-NEXT:    negl %eax
+; SKX-NEXT:    movslq %eax, %r9
+; SKX-NEXT:    movq -56(%rsp,%r9), %rdx
+; SKX-NEXT:    movq -48(%rsp,%r9), %rax
+; SKX-NEXT:    movq %rax, %rsi
+; SKX-NEXT:    shldq %cl, %rdx, %rsi
+; SKX-NEXT:    movq -40(%rsp,%r9), %r10
+; SKX-NEXT:    movq %r10, %r8
+; SKX-NEXT:    shldq %cl, %rax, %r8
+; SKX-NEXT:    movq -32(%rsp,%r9), %r11
+; SKX-NEXT:    movq %r11, %rbx
+; SKX-NEXT:    shldq %cl, %r10, %rbx
+; SKX-NEXT:    movq %rdi, %rax
+; SKX-NEXT:    movq -24(%rsp,%r9), %rdi
+; SKX-NEXT:    movq %rdi, %r10
+; SKX-NEXT:    shldq %cl, %r11, %r10
+; SKX-NEXT:    movq -64(%rsp,%r9), %r11
+; SKX-NEXT:    movq -16(%rsp,%r9), %r14
+; SKX-NEXT:    movq %r14, %r15
+; SKX-NEXT:    shldq %cl, %rdi, %r15
+; SKX-NEXT:    movq -8(%rsp,%r9), %rdi
+; SKX-NEXT:    shldq %cl, %r14, %rdi
+; SKX-NEXT:    shlxq %rcx, %r11, %r9
+; SKX-NEXT:    # kill: def $cl killed $cl killed $rcx
+; SKX-NEXT:    shldq %cl, %r11, %rdx
+; SKX-NEXT:    movq %rdi, 56(%rax)
+; SKX-NEXT:    movq %r15, 48(%rax)
+; SKX-NEXT:    movq %r10, 40(%rax)
+; SKX-NEXT:    movq %rbx, 32(%rax)
+; SKX-NEXT:    movq %r8, 24(%rax)
+; SKX-NEXT:    movq %rsi, 16(%rax)
+; SKX-NEXT:    movq %rdx, 8(%rax)
+; SKX-NEXT:    movq %r9, (%rax)
+; SKX-NEXT:    popq %rbx
+; SKX-NEXT:    .cfi_def_cfa_offset 24
+; SKX-NEXT:    popq %r14
+; SKX-NEXT:    .cfi_def_cfa_offset 16
+; SKX-NEXT:    popq %r15
+; SKX-NEXT:    .cfi_def_cfa_offset 8
+; SKX-NEXT:    vzeroupper
+; SKX-NEXT:    retq
+  %shiftval = load i512, ptr %x
+  %shiftamt = load i512, ptr %shift
+  %res = shl i512 %shiftval, %shiftamt
+  ret i512 %res
+}
