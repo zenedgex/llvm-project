@@ -1884,6 +1884,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i512, Custom);
     setOperationAction(ISD::ADD, MVT::i512, Custom);
     setOperationAction(ISD::SUB, MVT::i512, Custom);
+    setOperationAction(ISD::SHL, MVT::i512, Custom);
+    setOperationAction(ISD::SRL, MVT::i512, Custom);
+    setOperationAction(ISD::SRA, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
@@ -34328,6 +34331,83 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         DAG.getNode(ISD::VSELECT, dl, VecVT, CorrVec, Adjusted, Partial);
 
     Results.push_back(DAG.getBitcast(VT, Res));
+    return;
+  }
+  case ISD::SRA:
+  case ISD::SRL:
+  case ISD::SHL: {
+    SDValue ShiftVal = N->getOperand(0);
+    SDValue ShiftAmt = N->getOperand(1);
+    SDLoc DL(N);
+    EVT VT = N->getValueType(0);
+    assert(VT == MVT::i512 && "Unexpected VT!");
+    assert(Subtarget.useAVX512Regs() && "AVX512 required");
+
+    EVT VecVT = MVT::v8i64;
+    SDValue ShiftValVec = DAG.getBitcast(VecVT, ShiftVal);
+    SDValue ShiftAmtExt = DAG.getZExtOrTrunc(ShiftAmt, DL, MVT::i32);
+
+    // Complete Lanes to shift
+    SDValue LaneShift = DAG.getNode(ISD::SRL, DL, MVT::i32, ShiftAmtExt,
+                                    DAG.getConstant(6, DL, MVT::i32));
+
+    // Remaining bits to shift
+    SDValue BitShift = DAG.getNode(ISD::UREM, DL, MVT::i32, ShiftAmtExt,
+                                   DAG.getConstant(64, DL, MVT::i32));
+
+    SDValue BitShift64 = DAG.getZExtOrTrunc(BitShift, DL, MVT::i64);
+    SDValue BitShiftV = DAG.getSplatBuildVector(VecVT, DL, BitShift64);
+
+    SDValue MaskShift =
+        DAG.getNode(ISD::SHL, DL, MVT::i8, DAG.getConstant(0xFF, DL, MVT::i8),
+                    DAG.getZExtOrTrunc(LaneShift, DL, MVT::i8));
+
+    SDValue ZeroV = DAG.getConstant(0, DL, VecVT);
+
+    SDValue Lo, Hi, Res;
+    bool IsShiftLeft = Opc == ISD::SHL;
+
+    switch (Opc) {
+    case ISD::SHL: {
+      Lo =
+          DAG.getNode(X86ISD::EXPAND, DL, VecVT, ShiftValVec, MaskShift, ZeroV);
+
+      Hi = DAG.getNode(X86ISD::PALIGNR, DL, VecVT, Lo, ZeroV,
+                       DAG.getConstant(7 * 8, DL, MVT::i8));
+      break;
+    }
+    case ISD::SRL: {
+      Hi = DAG.getNode(X86ISD::COMPRESS, DL, VecVT, ShiftValVec, MaskShift,
+                       ZeroV);
+
+      Lo = DAG.getNode(X86ISD::PALIGNR, DL, VecVT, ZeroV, Hi,
+                       DAG.getConstant(1 * 8, DL, MVT::i8));
+      break;
+    }
+
+    case ISD::SRA: {
+      SDValue AShrAmt = DAG.getConstant(63, DL, MVT::i32);
+
+      SDValue AShr = DAG.getNode(ISD::SRA, DL, VT, ShiftVal,
+                                 DAG.getSplatBuildVector(VT, DL, AShrAmt));
+      SDValue Lane7 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, AShr,
+                                  DAG.getConstant(7, DL, MVT::i32));
+      SDValue Sign = DAG.getSplatBuildVector(VT, DL, Lane7);
+      Hi = DAG.getNode(X86ISD::COMPRESS, DL, VecVT, ShiftValVec, MaskShift,
+                       ZeroV);
+
+      Lo = DAG.getNode(X86ISD::PALIGNR, DL, VecVT, Sign, Hi,
+                       DAG.getConstant(1 * 8, DL, MVT::i8));
+      break;
+    }
+    }
+
+    // Funnel shift such that res[i] = (lo[i] << bit) | (hi[i] >> (64 - bit))
+    Res = DAG.getNode(IsShiftLeft ? X86ISD::VSHLD : X86ISD::VSHRD, DL, VecVT,
+                      Lo, Hi, BitShiftV);
+
+    // Cast back to i512
+    Results.push_back(DAG.getBitcast(MVT::i512, Res));
     return;
   }
   case ISD::CTPOP: {
