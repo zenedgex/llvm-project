@@ -50,7 +50,6 @@ namespace Intrinsic {
   // Get the intrinsic enums generated from Intrinsics.td
 #define GET_INTRINSIC_ENUM_VALUES
 #include "llvm/IR/IntrinsicEnums.inc"
-#undef GET_INTRINSIC_ENUM_VALUES
   };
 
   /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx".
@@ -199,7 +198,6 @@ namespace Intrinsic {
     enum ArgKind {
 #define GET_INTRINSIC_ARGKIND
 #include "llvm/IR/IntrinsicEnums.inc"
-#undef GET_INTRINSIC_ARGKIND
     };
 
     unsigned getArgumentNumber() const {
