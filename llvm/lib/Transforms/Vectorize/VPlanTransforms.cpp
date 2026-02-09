@@ -4950,6 +4950,7 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheck,
       Mask = WARMask;
   }
 
+  // Replace all users of the symbolic alias-mask with the materialized value.
   AliasMask.replaceAllUsesWith(Mask);
 
   Type *IVTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());

@@ -1411,6 +1411,11 @@ public:
     IsPartialAliasMaskingEnabled = false;
   }
 
+  void disablePartialAliasMaskingIfEnabled() {
+    if (IsPartialAliasMaskingEnabled)
+      IsPartialAliasMaskingEnabled = false;
+  }
+
   /// Returns true if all loop blocks should have partial aliases masked.
   bool maskPartialAliasing() const {
     return IsPartialAliasMaskingEnabled.value_or(false);
@@ -1855,16 +1860,21 @@ class GeneratedRTChecks {
 
   PredicatedScalarEvolution &PSE;
 
-  LoopVectorizationCostModel &CM;
+  /// The kind of cost that we are calculating
+  TTI::TargetCostKind CostKind;
+
+  /// True if the loop is alias-masked (which allows us to omit diff checks).
+  bool LoopUsesAliasMasking = false;
 
 public:
   GeneratedRTChecks(PredicatedScalarEvolution &PSE, DominatorTree *DT,
                     LoopInfo *LI, TargetTransformInfo *TTI,
-                    LoopVectorizationCostModel &CM)
+                    TTI::TargetCostKind CostKind, bool LoopUsesAliasMasking)
       : DT(DT), LI(LI), TTI(TTI),
         SCEVExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
         MemCheckExp(*PSE.getSE(), "scev.check", /*PreserveLCSSA=*/false),
-        PSE(PSE), CM(CM) {}
+        PSE(PSE), CostKind(CostKind),
+        LoopUsesAliasMasking(LoopUsesAliasMasking) {}
 
   /// Generate runtime checks in SCEVCheckBlock and MemCheckBlock, so we can
   /// accurately estimate the cost of the runtime checks. The blocks are
@@ -1917,7 +1927,7 @@ public:
     }
 
     const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
-    if (RtPtrChecking.Need && !CM.maskPartialAliasing()) {
+    if (RtPtrChecking.Need && !LoopUsesAliasMasking) {
       auto *Pred = SCEVCheckBlock ? SCEVCheckBlock : Preheader;
       MemCheckBlock = SplitBlock(Pred, Pred->getTerminator(), DT, LI, nullptr,
                                  "vector.memcheck");
@@ -2000,7 +2010,7 @@ public:
       for (Instruction &I : *SCEVCheckBlock) {
         if (SCEVCheckBlock->getTerminator() == &I)
           continue;
-        InstructionCost C = TTI->getInstructionCost(&I, CM.CostKind);
+        InstructionCost C = TTI->getInstructionCost(&I, CostKind);
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
         RTCheckCost += C;
       }
@@ -2009,7 +2019,7 @@ public:
       for (Instruction &I : *MemCheckBlock) {
         if (MemCheckBlock->getTerminator() == &I)
           continue;
-        InstructionCost C = TTI->getInstructionCost(&I, CM.CostKind);
+        InstructionCost C = TTI->getInstructionCost(&I, CostKind);
         LLVM_DEBUG(dbgs() << "  " << C << "  for " << I << "\n");
         MemCheckCost += C;
       }
@@ -3128,8 +3138,8 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
   // Currently, we can't handle alias masking in reverse. Reversing the alias
   // mask is not correct (or necessary). When combined with tail-folding the ALM
   // should only be reversed where the alias-mask is true.
-  if (Stride < 0 && maskPartialAliasing())
-    return false;
+  if (Stride < 0)
+    disablePartialAliasMaskingIfEnabled();
 
   // If the instruction is a store located in a predicated block, it will be
   // scalarized.
@@ -8868,7 +8878,8 @@ static bool processLoopInVPlanNativePath(
   VPlan &BestPlan = LVP.getPlanFor(VF.Width);
 
   {
-    GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM);
+    GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind,
+                             CM.maskPartialAliasing());
     InnerLoopVectorizer LB(L, PSE, LI, DT, TTI, AC, VF.Width, /*UF=*/1, &CM,
                            Checks, BestPlan);
     LLVM_DEBUG(dbgs() << "Vectorizing outer loop in \""
@@ -9726,7 +9737,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (ORE->allowExtraAnalysis(LV_NAME))
     LVP.emitInvalidCostRemarks(ORE);
 
-  GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM);
+  GeneratedRTChecks Checks(PSE, DT, LI, TTI, CM.CostKind,
+                           CM.maskPartialAliasing());
   if (LVP.hasPlanWithVF(VF.Width)) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);
