@@ -1982,7 +1982,7 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
     uint64_t Part;
     if (match(Index,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
-                  m_VPValue(), m_ConstantInt(Part))))
+                  m_VPValue(), m_VPValue(), m_ConstantInt(Part))))
       Phis[Part] = Phi;
     else
       // Anything other than a CanonicalIVIncrementForPart is part 0
@@ -2828,6 +2828,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 
   // Create the ActiveLaneMask instruction using the correct start values.
   VPValue *TC = Plan.getTripCount();
+  VPValue *VF = &Plan.getVF();
 
   VPValue *TripCount, *IncrementValue;
   if (!DataAndControlFlowWithoutRuntimeCheck) {
@@ -2842,11 +2843,11 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
     // done after the active.lane.mask intrinsic is called.
     IncrementValue = CanonicalIVPHI;
     TripCount = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
-                                     {TC}, DL);
+                                     {TC, VF}, DL);
   }
   auto *EntryIncrement = Builder.createOverflowingOp(
-      VPInstruction::CanonicalIVIncrementForPart, {StartV}, {false, false}, DL,
-      "index.part.next");
+      VPInstruction::CanonicalIVIncrementForPart, {StartV, VF}, {false, false},
+      DL, "index.part.next");
 
   // Create the active lane mask instruction in the VPlan preheader.
   VPValue *ALMMultiplier =
@@ -2865,9 +2866,9 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
-  auto *InLoopIncrement =
-      Builder.createOverflowingOp(VPInstruction::CanonicalIVIncrementForPart,
-                                  {IncrementValue}, {false, false}, DL);
+  auto *InLoopIncrement = Builder.createOverflowingOp(
+      VPInstruction::CanonicalIVIncrementForPart,
+      {IncrementValue, &Plan.getVF()}, {false, false}, DL);
   auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
                                    {InLoopIncrement, TripCount, ALMMultiplier},
                                    DL, "active.lane.mask.next");

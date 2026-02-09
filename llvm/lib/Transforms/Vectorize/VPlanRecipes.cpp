@@ -449,7 +449,6 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Load:
   case VPInstruction::BranchOnCond:
   case VPInstruction::Broadcast:
-  case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractLastPart:
@@ -471,6 +470,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
+  case VPInstruction::CalculateTripCountMinusVF:
     return 2;
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
@@ -628,7 +628,8 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::CalculateTripCountMinusVF: {
     unsigned UF = getParent()->getPlan()->getUF();
     Value *ScalarTC = State.get(getOperand(0), VPLane(0));
-    Value *Step = createStepForVF(Builder, ScalarTC->getType(), State.VF, UF);
+    Value *VF = State.get(getOperand(1), VPLane(0));
+    Value *Step = createStep(Builder, ScalarTC->getType(), VF, UF);
     Value *Sub = Builder.CreateSub(ScalarTC, Step);
     Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
     Value *Zero = ConstantInt::getNullValue(ScalarTC->getType());
@@ -653,10 +654,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
   case VPInstruction::CanonicalIVIncrementForPart: {
     unsigned Part = getUnrollPart(*this);
     auto *IV = State.get(getOperand(0), VPLane(0));
+    auto *VF = State.get(getOperand(1), VPLane(0));
     assert(Part != 0 && "Must have a positive part");
     // The canonical IV is incremented by the vectorization factor (num of
     // SIMD elements) times the unroll part.
-    Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
+    Value *Step = createStep(Builder, IV->getType(), VF, Part);
     return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
                              hasNoSignedWrap());
   }

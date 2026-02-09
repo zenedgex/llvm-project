@@ -50,6 +50,9 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step);
 
+/// Return a Step multiplied by a runtime StepSize.
+Value *createStep(IRBuilderBase &B, Type *Ty, Value *StepSize, int64_t Step);
+
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.
 /// For integer induction, returns StartValue + Index * StepValue.

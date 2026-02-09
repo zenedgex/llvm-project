@@ -467,7 +467,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
         auto *VPI = dyn_cast<VPInstruction>(&R);
         if (VPI &&
             VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
-            VPI->getNumOperands() == 1) {
+            VPI->getNumOperands() == 2) {
           VPI->replaceAllUsesWith(VPI->getOperand(0));
           VPI->eraseFromParent();
         }

@@ -1153,7 +1153,7 @@ public:
 /// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
                                         public VPIRMetadata,
-                                        public VPUnrollPartAccessor<1> {
+                                        public VPUnrollPartAccessor<2> {
   friend class VPlanSlp;
 
 public:
