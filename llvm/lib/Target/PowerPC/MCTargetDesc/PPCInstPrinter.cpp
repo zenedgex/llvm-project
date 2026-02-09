@@ -325,7 +325,7 @@ void PPCInstPrinter::printATBitsAsHint(const MCInst *MI, unsigned OpNo,
 
 // Template for unsigned immediate operands with validation.
 // Validates that the value fits within the specified width and prints it.
-template<unsigned Width>
+template <unsigned Width>
 void PPCInstPrinter::printUImmOperand(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
@@ -336,7 +336,7 @@ void PPCInstPrinter::printUImmOperand(const MCInst *MI, unsigned OpNo,
 
 // Template for signed immediate operands with sign extension.
 // Sign-extends the value to the specified width and prints it.
-template<unsigned Width>
+template <unsigned Width>
 void PPCInstPrinter::printSImmOperand(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {

@@ -57,12 +57,12 @@ public:
                          const MCSubtargetInfo &STI, raw_ostream &O);
 
   // Template for unsigned immediate operands with validation.
-  template<unsigned Width>
+  template <unsigned Width>
   void printUImmOperand(const MCInst *MI, unsigned OpNo,
                         const MCSubtargetInfo &STI, raw_ostream &O);
 
   // Template for signed immediate operands with sign extension.
-  template<unsigned Width>
+  template <unsigned Width>
   void printSImmOperand(const MCInst *MI, unsigned OpNo,
                         const MCSubtargetInfo &STI, raw_ostream &O);
 
