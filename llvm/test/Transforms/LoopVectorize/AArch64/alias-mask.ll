@@ -356,6 +356,8 @@ exit:                                 ; preds = %for.body, %entry
   ret void
 }
 
+; Checks using a scalar outside the loop, with requires extracting the last
+; active element.
 define i8 @alias_masking_exit_value(ptr %ptrA, ptr %ptrB) {
 ; CHECK-LABEL: define i8 @alias_masking_exit_value(
 ; CHECK-SAME: ptr [[PTRA:%.*]], ptr [[PTRB:%.*]]) #[[ATTR0]] {
