@@ -591,6 +591,21 @@ bool Loop::isAnnotatedParallel() const {
       if (!I.mayReadOrWriteMemory())
         continue;
 
+      // If the loop contains a store instruction into an alloca that is outside
+      // of the loop, it is possible that the alloca was initially related to a
+      // loop-local variable but got hoisted outside during e.g. inlining or
+      // some other parallel-loop-unaware pass.
+      //
+      // TODO: Allow metadata to mark 'alloca' as safe to vectorize and
+      // separately handle such allocas in the loop vectorizer, either by
+      // sinking the `alloca` into the loop body or by otherwise "privatizing"
+      // the allocation for each vector lane.
+      if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+        AllocaInst *AI = findAllocaForValue(SI->getPointerOperand());
+        if (AI && !contains(AI))
+          return false;
+      }
+
       if (MDNode *AccessGroup = I.getMetadata(LLVMContext::MD_access_group)) {
         auto ContainsAccessGroup = [&ParallelAccessGroups](MDNode *AG) -> bool {
           if (AG->getNumOperands() == 0) {
