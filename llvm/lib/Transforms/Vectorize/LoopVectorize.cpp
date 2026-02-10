@@ -792,11 +792,10 @@ Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
   return B.CreateElementCount(Ty, VFxStep);
 }
 
-Value *createStep(IRBuilderBase &B, Type *Ty, Value *StepSize, int64_t Step) {
-  if (Step == 1)
-    return B.CreateZExtOrTrunc(StepSize, Ty);
-  return B.CreateMul(ConstantInt::get(Ty, Step),
-                     B.CreateZExtOrTrunc(StepSize, Ty));
+Value *scaleValueByConst(IRBuilderBase &B, Type *Ty, Value *V, int64_t Const) {
+  if (Const == 1)
+    return B.CreateZExtOrTrunc(V, Ty);
+  return B.CreateMul(ConstantInt::get(Ty, Const), B.CreateZExtOrTrunc(V, Ty));
 }
 
 /// Return the runtime value for VF.

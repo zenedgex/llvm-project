@@ -50,8 +50,8 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step);
 
-/// Return a Step multiplied by a runtime StepSize.
-Value *createStep(IRBuilderBase &B, Type *Ty, Value *StepSize, int64_t Step);
+/// Returns `(zext/trunc V to Ty) * Ty(Const)`.
+Value *scaleValueByConst(IRBuilderBase &B, Type *Ty, Value *V, int64_t Const);
 
 /// Compute the transformed value of Index at offset StartValue using step
 /// StepValue.

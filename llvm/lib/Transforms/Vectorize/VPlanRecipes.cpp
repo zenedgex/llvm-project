@@ -629,7 +629,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     unsigned UF = getParent()->getPlan()->getUF();
     Value *ScalarTC = State.get(getOperand(0), VPLane(0));
     Value *VF = State.get(getOperand(1), VPLane(0));
-    Value *Step = createStep(Builder, ScalarTC->getType(), VF, UF);
+    Value *Step = scaleValueByConst(Builder, ScalarTC->getType(), VF, UF);
     Value *Sub = Builder.CreateSub(ScalarTC, Step);
     Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
     Value *Zero = ConstantInt::getNullValue(ScalarTC->getType());
@@ -658,7 +658,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     assert(Part != 0 && "Must have a positive part");
     // The canonical IV is incremented by the vectorization factor (num of
     // SIMD elements) times the unroll part.
-    Value *Step = createStep(Builder, IV->getType(), VF, Part);
+    Value *Step = scaleValueByConst(Builder, IV->getType(), VF, Part);
     return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
                              hasNoSignedWrap());
   }
