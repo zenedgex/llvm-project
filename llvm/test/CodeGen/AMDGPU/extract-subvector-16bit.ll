@@ -1308,15 +1308,15 @@ define <8 x i16> @large_vector(ptr addrspace(3) %p, i32 %idxp) {
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
-; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
-; SI-NEXT:    v_add_i32_e32 v1, vcc, 4, v0
-; SI-NEXT:    v_add_i32_e32 v2, vcc, 8, v0
-; SI-NEXT:    v_add_i32_e32 v3, vcc, 12, v0
+; SI-NEXT:    v_add_i32_e32 v1, vcc, v0, v1
 ; SI-NEXT:    s_mov_b32 m0, -1
-; SI-NEXT:    ds_read_b32 v0, v0
-; SI-NEXT:    ds_read_b32 v1, v1
-; SI-NEXT:    ds_read_b32 v2, v2
-; SI-NEXT:    ds_read_b32 v3, v3
+; SI-NEXT:    ds_read_b32 v0, v1
+; SI-NEXT:    v_add_i32_e32 v2, vcc, 4, v1
+; SI-NEXT:    v_add_i32_e32 v3, vcc, 8, v1
+; SI-NEXT:    v_add_i32_e32 v4, vcc, 12, v1
+; SI-NEXT:    ds_read_b32 v1, v2
+; SI-NEXT:    ds_read_b32 v2, v3
+; SI-NEXT:    ds_read_b32 v3, v4
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;

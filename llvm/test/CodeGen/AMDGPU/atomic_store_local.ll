@@ -10,8 +10,8 @@ define void @atomic_store_monotonic_i8(ptr addrspace(3) %ptr, i8 %val) {
 ; CI-LABEL: atomic_store_monotonic_i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b8 v0, v1
 ; CI-NEXT:    ds_write_b8 v0, v2
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -73,8 +73,8 @@ define void @atomic_store_monotonic_offset_i8(ptr addrspace(3) %ptr, i8 %val) {
 ; CI-LABEL: atomic_store_monotonic_offset_i8:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b8 v0, v1 offset:8
 ; CI-NEXT:    ds_write_b8 v0, v2 offset:16
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -138,8 +138,8 @@ define void @atomic_store_monotonic_i16(ptr addrspace(3) %ptr, i16 %val) {
 ; CI-LABEL: atomic_store_monotonic_i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b16 v0, v1
 ; CI-NEXT:    ds_write_b16 v0, v2
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -201,8 +201,8 @@ define void @atomic_store_monotonic_offset_i16(ptr addrspace(3) %ptr, i16 %val) 
 ; CI-LABEL: atomic_store_monotonic_offset_i16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b16 v0, v1 offset:32
 ; CI-NEXT:    ds_write_b16 v0, v2 offset:32
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -405,8 +405,8 @@ define void @atomic_store_monotonic_f16(ptr addrspace(3) %ptr, i16 %arg.val) {
 ; CI-LABEL: atomic_store_monotonic_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b16 v0, v1
 ; CI-NEXT:    ds_write_b16 v0, v2
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -470,8 +470,8 @@ define void @atomic_store_monotonic_offset_f16(ptr addrspace(3) %ptr, i16 %arg.v
 ; CI-LABEL: atomic_store_monotonic_offset_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b16 v0, v1 offset:32
 ; CI-NEXT:    ds_write_b16 v0, v2 offset:32
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -536,8 +536,8 @@ define void @atomic_store_monotonic_bf16(ptr addrspace(3) %ptr, i16 %arg.val) {
 ; CI-LABEL: atomic_store_monotonic_bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b16 v0, v1
 ; CI-NEXT:    ds_write_b16 v0, v2
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
@@ -601,8 +601,8 @@ define void @atomic_store_monotonic_offset_bf16(ptr addrspace(3) %ptr, i16 %arg.
 ; CI-LABEL: atomic_store_monotonic_offset_bf16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, 2, v1
+; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    ds_write_b16 v0, v1 offset:32
 ; CI-NEXT:    ds_write_b16 v0, v2 offset:32
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
