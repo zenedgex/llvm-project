@@ -568,19 +568,6 @@ bool Loop::isAnnotatedParallel() const {
   if (!DesiredLoopIdMetadata)
     return false;
 
-  MDNode *ParallelAccesses =
-      findOptionMDForLoop(this, "llvm.loop.parallel_accesses");
-  SmallPtrSet<MDNode *, 4>
-      ParallelAccessGroups; // For scalable 'contains' check.
-  if (ParallelAccesses) {
-    for (const MDOperand &MD : drop_begin(ParallelAccesses->operands())) {
-      MDNode *AccGroup = cast<MDNode>(MD.get());
-      assert(isValidAsAccessGroup(AccGroup) &&
-             "List item must be an access group");
-      ParallelAccessGroups.insert(AccGroup);
-    }
-  }
-
   // The loop branch contains the parallel loop metadata. In order to ensure
   // that any parallel-loop-unaware optimization pass hasn't added loop-carried
   // dependencies (thus converted the loop back to a sequential loop), check
@@ -591,40 +578,8 @@ bool Loop::isAnnotatedParallel() const {
       if (!I.mayReadOrWriteMemory())
         continue;
 
-      auto ContainsAccessGroup = [&ParallelAccessGroups](MDNode *AG) -> bool {
-        if (AG->getNumOperands() == 0) {
-          assert(isValidAsAccessGroup(AG) && "Item must be an access group");
-          return ParallelAccessGroups.count(AG);
-        }
-
-        for (const MDOperand &AccessListItem : AG->operands()) {
-          MDNode *AccGroup = cast<MDNode>(AccessListItem.get());
-          assert(isValidAsAccessGroup(AccGroup) &&
-                 "List item must be an access group");
-          if (ParallelAccessGroups.count(AccGroup))
-            return true;
-        }
-        return false;
-      };
-
-      // If the loop contains a store instruction into an alloca that is outside
-      // of the loop, it is possible that the alloca was initially related to a
-      // loop-local variable but got hoisted outside during e.g. inlining or
-      // some other parallel-loop-unaware pass. However, if the alloca itself
-      // has been marked with the access group metadata, this usage has to be
-      // assumed to be valid.
-      if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
-        AllocaInst *AI = findAllocaForValue(SI->getPointerOperand());
-        if (AI) {
-          MDNode *AccessGroup = AI->getMetadata(LLVMContext::MD_access_group);
-          if (AI && !contains(AI) &&
-                  (!AccessGroup || !ContainsAccessGroup(AccessGroup)))
-            return false;
-        }
-      }
-
       if (MDNode *AccessGroup = I.getMetadata(LLVMContext::MD_access_group)) {
-        if (ContainsAccessGroup(AccessGroup))
+        if (containsAccessGroup(AccessGroup))
           continue;
       }
 
@@ -643,6 +598,39 @@ bool Loop::isAnnotatedParallel() const {
     }
   }
   return true;
+}
+
+bool Loop::containsAccessGroup(MDNode* AG) const
+{
+  MDNode *ParallelAccesses =
+      findOptionMDForLoop(this, "llvm.loop.parallel_accesses");
+  auto MetadataContainsGroup = [ParallelAccesses](MDNode *AccGroup) -> bool {
+    if (ParallelAccesses) {
+      for (const MDOperand &MD : drop_begin(ParallelAccesses->operands())) {
+        MDNode *Group = cast<MDNode>(MD.get());
+        assert(isValidAsAccessGroup(Group) &&
+               "List item must be an access group");
+
+        if (AccGroup == Group)
+          return true;
+      }
+    }
+    return false;
+  };
+
+  if (AG->getNumOperands() == 0) {
+    assert(isValidAsAccessGroup(AG) && "Item must be an access group");
+    return MetadataContainsGroup(AG);
+  }
+
+  for (const MDOperand &AccessListItem : AG->operands()) {
+    MDNode *AccGroup = cast<MDNode>(AccessListItem.get());
+    assert(isValidAsAccessGroup(AccGroup) &&
+           "List item must be an access group");
+    if (MetadataContainsGroup(AccGroup))
+      return true;
+  }
+  return false;
 }
 
 DebugLoc Loop::getStartLoc() const { return getLocRange().getStart(); }
