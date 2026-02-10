@@ -179,6 +179,7 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
+  const unsigned MaxStructToVectorSize;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -241,9 +242,9 @@ class SROA {
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       SROAOptions PreserveCFG_)
-      : C(C), DTU(DTU), AC(AC),
-        PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
+       bool PreserveCFG_, unsigned MaxStructToVectorSize_)
+      : C(C), DTU(DTU), AC(AC), PreserveCFG(PreserveCFG_),
+        MaxStructToVectorSize(MaxStructToVectorSize_) {}
 
   /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
@@ -5121,6 +5122,71 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   return true;
 }
 
+/// Try to canonicalize a homogeneous, tightly-packed struct to a vector type.
+///
+/// For structs where all elements have the same type and are tightly packed
+/// (no padding), we can represent them as a fixed vector which enables better
+/// optimization (e.g., vector selects instead of memcpy).
+///
+/// \param STy The struct type to try to canonicalize.
+/// \param DL The DataLayout for size/alignment queries.
+/// \param MaxBytes Maximum struct size in bytes to consider (0 = disabled).
+/// \returns The equivalent vector type, or nullptr if not applicable.
+static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
+                                                      const DataLayout &DL,
+                                                      unsigned MaxBytes) {
+  if (MaxBytes == 0)
+    return nullptr;
+
+  // Only handle 2 or 4 element structs (common cases like float2/float4).
+  unsigned NumElts = STy->getNumElements();
+  if (NumElts != 2 && NumElts != 4)
+    return nullptr;
+
+  // All elements must be the same type.
+  Type *EltTy = STy->getElementType(0);
+  for (unsigned I = 1; I < NumElts; ++I)
+    if (STy->getElementType(I) != EltTy)
+      return nullptr;
+
+  // Element type must be valid for vectors.
+  if (!VectorType::isValidElementType(EltTy))
+    return nullptr;
+
+  // Only allow integer types >= 8 bits or floating point.
+  if (auto *IT = dyn_cast<IntegerType>(EltTy)) {
+    if (IT->getBitWidth() < 8)
+      return nullptr;
+  } else if (!EltTy->isFloatingPointTy()) {
+    return nullptr;
+  }
+
+  // Element size must be fixed and non-zero.
+  TypeSize EltTS = DL.getTypeAllocSize(EltTy);
+  if (!EltTS.isFixed())
+    return nullptr;
+  uint64_t EltSize = EltTS.getFixedValue();
+  if (EltSize < 1)
+    return nullptr;
+
+  // Struct size must be within the threshold.
+  const StructLayout *SL = DL.getStructLayout(STy);
+  uint64_t StructSize = SL->getSizeInBytes();
+  if (StructSize == 0 || StructSize > MaxBytes)
+    return nullptr;
+
+  // Must be tightly packed: size == NumElts * EltSize.
+  if (StructSize != NumElts * EltSize)
+    return nullptr;
+
+  // Verify each element is at the expected offset (no padding).
+  for (unsigned I = 0; I < NumElts; ++I)
+    if (SL->getElementOffset(I) != I * EltSize)
+      return nullptr;
+
+  return FixedVectorType::get(EltTy, NumElts);
+}
+
 /// Select a partition type for an alloca partition.
 ///
 /// Try to compute a friendly type for this partition of the alloca. This
@@ -5134,7 +5200,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
 ///     nullptr.
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
-                    LLVMContext &C) {
+                    LLVMContext &C, unsigned MaxStructToVectorSize) {
   // First check if the partition is viable for vector promotion.
   //
   // We prefer vector promotion over integer widening promotion when:
@@ -5194,6 +5260,12 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         isIntegerWideningViable(P, LargestIntTy, DL))
       return {LargestIntTy, true, nullptr};
 
+    // Try homogeneous struct to vector canonicalization.
+    if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
+      if (auto *VTy =
+              tryCanonicalizeStructToVector(STy, DL, MaxStructToVectorSize))
+        return {VTy, false, nullptr};
+
     // Fallback to TypePartitionTy and we probably won't promote.
     return {TypePartitionTy, false, nullptr};
   }
@@ -5226,7 +5298,7 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C);
+      selectPartitionType(P, DL, AI, *C, MaxStructToVectorSize);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -6064,8 +6136,11 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  // Use pass parameter if set, otherwise use default of 16 bytes.
+  unsigned StructToVectorSize = Options.MaxStructToVectorSize.value_or(16);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+      SROA(&F.getContext(), &DTU, &AC, Options.PreserveCFG, StructToVectorSize)
+          .runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -6079,22 +6154,23 @@ void SROAPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SROAPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << (PreserveCFG == SROAOptions::PreserveCFG ? "<preserve-cfg>"
-                                                 : "<modify-cfg>");
+  OS << '<';
+  OS << (Options.PreserveCFG ? "preserve-cfg" : "modify-cfg");
+  if (Options.MaxStructToVectorSize)
+    OS << ";max-struct-to-vector=" << *Options.MaxStructToVectorSize;
+  OS << '>';
 }
-
-SROAPass::SROAPass(SROAOptions PreserveCFG) : PreserveCFG(PreserveCFG) {}
 
 namespace {
 
 /// A legacy pass for the legacy pass manager that wraps the \c SROA pass.
 class SROALegacyPass : public FunctionPass {
-  SROAOptions PreserveCFG;
+  bool PreserveCFG;
 
 public:
   static char ID;
 
-  SROALegacyPass(SROAOptions PreserveCFG = SROAOptions::PreserveCFG)
+  SROALegacyPass(bool PreserveCFG = true)
       : FunctionPass(ID), PreserveCFG(PreserveCFG) {
     initializeSROALegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -6107,8 +6183,11 @@ public:
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    // Use default of 16 bytes for struct-to-vector canonicalization.
+    unsigned MaxStructToVectorSize = 16;
     auto [Changed, _] =
-        SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+        SROA(&F.getContext(), &DTU, &AC, PreserveCFG, MaxStructToVectorSize)
+            .runSROA(F);
     return Changed;
   }
 
@@ -6127,8 +6206,7 @@ public:
 char SROALegacyPass::ID = 0;
 
 FunctionPass *llvm::createSROAPass(bool PreserveCFG) {
-  return new SROALegacyPass(PreserveCFG ? SROAOptions::PreserveCFG
-                                        : SROAOptions::ModifyCFG);
+  return new SROALegacyPass(PreserveCFG);
 }
 
 INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",

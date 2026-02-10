@@ -16,26 +16,36 @@
 #define LLVM_TRANSFORMS_SCALAR_SROA_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace llvm {
 
 class Function;
 
-enum class SROAOptions : bool { ModifyCFG, PreserveCFG };
+/// Options for the SROA pass pipeline configuration.
+struct SROAPassOptions {
+  /// Whether to preserve the CFG (no modifications allowed).
+  /// Default is false (modify-cfg) to match the original SROA behavior.
+  bool PreserveCFG = false;
+  /// Maximum size in bytes of a homogeneous struct to convert to a vector.
+  /// If nullopt, defaults to 16 bytes.
+  std::optional<unsigned> MaxStructToVectorSize = std::nullopt;
+};
 
 class SROAPass : public PassInfoMixin<SROAPass> {
-  const SROAOptions PreserveCFG;
+  SROAPassOptions Options;
 
 public:
-  /// If \p PreserveCFG is set, then the pass is not allowed to modify CFG
-  /// in any way, even if it would update CFG analyses.
-  SROAPass(SROAOptions PreserveCFG);
+  /// Construct SROA pass with the given options.
+  SROAPass(SROAPassOptions Options = {}) : Options(Options) {}
 
   /// Run the pass over the function.
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  void printPipeline(raw_ostream &OS,
-                     function_ref<StringRef(StringRef)> MapClassName2PassName);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // end namespace llvm

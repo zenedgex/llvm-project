@@ -1,4 +1,4 @@
-; RUN: opt -passes=sroa -S %s -o - \
+; RUN: opt -passes='sroa<max-struct-to-vector=0>' -S %s -o - \
 ; RUN: | FileCheck %s --implicit-check-not="#dbg_"
 
 ;; Check that the fragments generated in SROA for a split alloca that has a

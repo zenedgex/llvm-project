@@ -1,4 +1,4 @@
-; RUN: opt -passes='sroa' < %s -S -o - | FileCheck %s
+; RUN: opt -passes='sroa<max-struct-to-vector=0>' < %s -S -o - | FileCheck %s
 ;
 ; Test that recursively splitting an alloca updates the debug info correctly.
 ; CHECK: %[[T:.*]] = load i64, ptr @t, align 8
