@@ -382,3 +382,24 @@ func.func @unordered_cfg_with_loop() {
 // CHECK:       Cannot erase block ^bb2 from region 0 from operation 'regionOp0', still has uses
 // CHECK:       Cannot erase block ^bb3 from region 0 from operation 'regionOp0', still has uses
 // CHECK:       Cannot erase block ^bb4 from region 0 from operation 'regionOp0', still has uses
+
+// -----
+
+// The following test should not crash while visiting the intra-op blocks (inside the top level 
+// function in this case) in non-post-order fashion and dropping inside op uses appropriately.
+// CHECK-LABEL: Op post-order erasures (no skip)
+func.func @test_no_skip_block_erasure() {
+  %c0 = arith.constant 0 : index
+  %c3 = arith.constant 3 : index
+  cf.br ^bb1
+^bb1:
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %c256 = arith.constant 256 : index
+  %cond = arith.cmpi eq, %c0, %c3 : index
+  cf.cond_br %cond, ^bb2, ^bb4
+^bb2:
+  cf.br ^bb4
+^bb4:
+  return
+}

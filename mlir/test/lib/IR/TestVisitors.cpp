@@ -184,6 +184,21 @@ static void testNoSkipErasureCallbacks(Operation *op) {
       llvm::outs() << "Erasing ";
       printBlock(block);
       llvm::outs() << "\n";
+
+      // Only drop intra-region uses of ops inside the block (they don't have a
+      // post-order visit expectation here). We only expect to visit the block
+      // parent ops in post-order, so we can safely erase the block if nothing
+      // outside the surrounding region still needs it.
+      Operation *blockParentOp = block->getParentOp();
+      for (Operation &op : *block) {
+        for (OpOperand &use : llvm::make_early_inc_range(op.getUses())) {
+          Operation *userRegionHolder = use.getOwner()->getParentOp();
+          // Drop only when both ops live under the same region holder.
+          if (userRegionHolder == blockParentOp)
+            use.drop();
+        }
+      }
+
       block->erase();
     } else {
       llvm::outs() << "Cannot erase ";
