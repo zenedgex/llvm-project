@@ -243,6 +243,28 @@ def ApplyLowerMultiReductionPatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyLowerMultiReductionFlatteningPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.lower_multi_reduction_flattening",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that n-D vector.multi_reduction operations (already in
+    innermost/outermost reduction form) should be flattened to 2-D
+    via shape_cast.
+
+    This populates the patterns from
+    `populateVectorMultiReductionFlatteningPatterns`, i.e.:
+    * `ReduceMultiDimReductionRank`
+  }];
+
+  let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
+      "vector::VectorMultiReductionLowering::InnerParallel">:$lowering_strategy
+  );
+
+  let assemblyFormat = [{
+    (`lowering_strategy` `=` $lowering_strategy^)? attr-dict
+  }];
+}
+
 def ApplyLowerOuterProductPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_outerproduct",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
