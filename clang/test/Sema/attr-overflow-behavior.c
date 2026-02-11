@@ -242,3 +242,13 @@ void test_int_literal_to_obt_param(void) {
   takes_obt_param(0);
   takes_obt_param(42);
 }
+
+// OBT specifiers cannot qualify pointers
+void (* __ob_wrap bad_fp)(int); // expected-error {{__ob_wrap specifier cannot be applied to non-integer type 'void (*)(int)'}}
+int (* __ob_wrap bad_arr_ptr)[10]; // expected-error {{__ob_wrap specifier cannot be applied to non-integer type 'int (*)[10]'}}
+int * __ob_wrap bad_ptr; // expected-error {{__ob_wrap specifier cannot be applied to non-integer type 'int *'}}
+int * __ob_trap bad_ptr2; // expected-error {{__ob_trap specifier cannot be applied to non-integer type 'int *'}}
+
+// OBT specifiers on the base integer type (before *) are fine
+int __ob_wrap *good_ptr;
+int __ob_trap *good_ptr2;

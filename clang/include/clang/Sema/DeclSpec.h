@@ -1293,6 +1293,14 @@ struct DeclaratorChunk {
     /// The location of the __unaligned-qualifier, if any.
     SourceLocation UnalignedQualLoc;
 
+    /// The location of an __ob_wrap or __ob_trap qualifier, if any.
+    SourceLocation OverflowBehaviorLoc;
+
+    /// Whether the overflow behavior qualifier is wrap (true) or trap (false).
+    /// Only meaningful if OverflowBehaviorLoc is valid.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned OverflowBehaviorIsWrap : 1;
+
     void destroy() {
     }
   };
@@ -1674,7 +1682,9 @@ struct DeclaratorChunk {
                                     SourceLocation VolatileQualLoc,
                                     SourceLocation RestrictQualLoc,
                                     SourceLocation AtomicQualLoc,
-                                    SourceLocation UnalignedQualLoc) {
+                                    SourceLocation UnalignedQualLoc,
+                                    SourceLocation OverflowBehaviorLoc = {},
+                                    bool OverflowBehaviorIsWrap = false) {
     DeclaratorChunk I;
     I.Kind                = Pointer;
     I.Loc                 = Loc;
@@ -1685,6 +1695,8 @@ struct DeclaratorChunk {
     I.Ptr.RestrictQualLoc = RestrictQualLoc;
     I.Ptr.AtomicQualLoc   = AtomicQualLoc;
     I.Ptr.UnalignedQualLoc = UnalignedQualLoc;
+    I.Ptr.OverflowBehaviorLoc = OverflowBehaviorLoc;
+    I.Ptr.OverflowBehaviorIsWrap = OverflowBehaviorIsWrap;
     return I;
   }
 

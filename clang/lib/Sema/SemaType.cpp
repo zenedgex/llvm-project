@@ -4756,6 +4756,15 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       T = S.BuildPointerType(T, DeclType.Loc, Name);
       if (DeclType.Ptr.TypeQuals)
         T = S.BuildQualifiedType(T, DeclType.Loc, DeclType.Ptr.TypeQuals);
+      if (DeclType.Ptr.OverflowBehaviorLoc.isValid()) {
+        auto OBState = DeclType.Ptr.OverflowBehaviorIsWrap
+                           ? DeclSpec::OverflowBehaviorState::Wrap
+                           : DeclSpec::OverflowBehaviorState::Trap;
+        S.Diag(DeclType.Ptr.OverflowBehaviorLoc,
+               diag::err_overflow_behavior_non_integer_type)
+            << DeclSpec::getSpecifierName(OBState) << T.getAsString() << 1;
+        D.setInvalidType(true);
+      }
       break;
     case DeclaratorChunk::Reference: {
       // Verify that we're not building a reference to pointer to function with

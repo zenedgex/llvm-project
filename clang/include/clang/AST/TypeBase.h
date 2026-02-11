@@ -2650,7 +2650,7 @@ public:
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
-  bool isOverflowBehaviorType() const;          // __attribute__((no_sanitize))
+  bool isOverflowBehaviorType() const;          // Overflow behavior type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
   bool isObjCRetainableType() const;            // ObjC object or block pointer
