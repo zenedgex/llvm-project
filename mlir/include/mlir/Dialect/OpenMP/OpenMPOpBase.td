@@ -38,6 +38,14 @@ def OpenMP_MapBoundsType : OpenMP_Type<"MapBounds", "map_bounds_ty"> {
   let summary = "Type for representing omp map clause bounds information";
 }
 
+def OpenMP_AffinityEntryType
+    : OpenMP_Type<"AffinityEntry", "affinity_entry_ty"> {
+  let summary = "Type for representing omp affinity clause locator information";
+
+  let parameters = (ins "Type":$addrType, "Type":$lenType);
+  let assemblyFormat = "`<` $addrType `,` $lenType `>`";
+}
+
 //===---------------------------------------------------------------------===//
 // OpenMP Canonical Loop Info Type
 //===---------------------------------------------------------------------===//
