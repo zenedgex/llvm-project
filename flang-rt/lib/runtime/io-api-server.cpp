@@ -1,0 +1,232 @@
+//===-- lib/runtime/io-api-server.cpp ---------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// Implements the RPC server-side handlling of the I/O statement API needed for
+// basic list-directed output (PRINT *) of intrinsic types for the GPU.
+
+#include "io-api-gpu.h"
+#include "flang-rt/runtime/memory.h"
+#include "flang-rt/runtime/terminator.h"
+#include "flang/Runtime/io-api.h"
+#include <cstdlib>
+#include <cstring>
+#include <tuple>
+
+#include <shared/rpc.h>
+#include <shared/rpc_dispatch.h>
+
+namespace Fortran::runtime::io {
+namespace {
+
+// Context used to chain the IO operations once run.
+struct IOContext {
+  Cookie cookie = nullptr;
+  enum Iostat result = IostatOk;
+};
+
+// The virtual base class to store deferred execution of a function.
+struct DeferredFunctionBase {
+  virtual ~DeferredFunctionBase() = default;
+  virtual void execute(IOContext &ctx) = 0;
+
+  static OwningPtr<char[]> TempString(const char *str) {
+    if (!str) {
+      return {};
+    }
+
+    const auto size = std::strlen(str) + 1;
+
+    Terminator terminator{__FILE__, __LINE__};
+    OwningPtr<char> temp = SizedNew<char>{terminator}(size);
+    std::memcpy(temp.get(), str, size);
+    return OwningPtr<char[]>(temp.release());
+  }
+};
+
+// Fortran does not support nested or recursive I/O, which is problematic for
+// parallel execution on a GPU. To support this, we defer execution of runtime
+// functions coming from the GPU's client until the end of that sequence is
+// reached. This allows us to finish them in a single pass.
+template <typename FnTy, typename... Args>
+struct DeferredFunction final : DeferredFunctionBase {
+  FnTy fn_;
+  std::tuple<std::decay_t<Args>...> args_;
+
+  DeferredFunction(FnTy &&fn, Args &&...args)
+      : fn_(std::forward<FnTy>(fn)), args_(std::forward<Args>(args)...) {}
+
+  // When executing the final command queue we need to replace the temporary
+  // values obtained from the GPU with the returned values from the actual
+  // runtime functions.
+  void execute(IOContext &ctx) override {
+    auto caller = [&](auto &&...args) { return fn_(Rewrite(args, ctx)...); };
+
+    using RetTy = std::invoke_result_t<FnTy,
+        decltype(Rewrite(std::declval<Args &>(), ctx))...>;
+    if constexpr (std::is_same_v<RetTy, Cookie>) {
+      ctx.cookie = std::apply(caller, args_);
+    } else if constexpr (std::is_same_v<RetTy, Iostat>) {
+      ctx.result = std::apply(caller, args_);
+    } else {
+      std::apply(caller, args_);
+    }
+  }
+
+private:
+  template <typename T> T &Rewrite(T &v, IOContext &) { return v; }
+
+  Cookie Rewrite(Cookie, IOContext &ctx) {
+    return reinterpret_cast<Cookie>(ctx.cookie);
+  }
+
+  const char *Rewrite(OwningPtr<char[]> &p, IOContext &) { return p.get(); }
+};
+
+template <typename Fn, typename... Args>
+OwningPtr<DeferredFunctionBase> MakeDeferred(Fn &&fn, Args &&...args) {
+  Terminator terminator{__FILE__, __LINE__};
+  using Ty = DeferredFunction<Fn, Args...>;
+  auto derived = SizedNew<Ty>{terminator}(
+      sizeof(Ty), std::forward<Fn>(fn), std::forward<Args>(args)...);
+
+  return OwningPtr<DeferredFunctionBase>{derived.release()};
+}
+
+// The context associated with the queue of deferred functions. This serves as
+// our cookie object while executing this on the GPU.
+struct DeferredContext {
+  IOContext ioCtx;
+  DynamicArray<OwningPtr<DeferredFunctionBase>> commands;
+};
+
+template <typename FnTy, typename... Args>
+bool EnqueueDeferred(FnTy &&fn, Cookie cookie, Args &&...args) {
+  DeferredContext *ctx = reinterpret_cast<DeferredContext *>(cookie);
+  ctx->commands.emplace_back(
+      MakeDeferred(fn, cookie, std::forward<Args>(args)...));
+  return true;
+}
+
+template <std::uint32_t NumLanes>
+rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
+  switch (port.get_opcode()) {
+  case BeginExternalListOutput_Opcode:
+    rpc::invoke<NumLanes>(port,
+        [](ExternalUnit unitNumber, const char *sourceFile,
+            int sourceLine) -> Cookie {
+          DeferredContext *ctx = new (AllocateMemoryOrCrash(
+              Terminator{__FILE__, __LINE__}, sizeof(DeferredContext)))
+              DeferredContext;
+
+          ctx->commands.emplace_back(
+              MakeDeferred(IODECL(BeginExternalListOutput), unitNumber,
+                  DeferredFunctionBase::TempString(sourceFile), sourceLine));
+
+          return reinterpret_cast<Cookie>(ctx);
+        });
+    break;
+  case EndIoStatement_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie) -> Iostat {
+      DeferredContext *ctx = reinterpret_cast<DeferredContext *>(cookie);
+
+      ctx->commands.emplace_back(
+          MakeDeferred(_FortranAioEndIoStatement, cookie));
+      for (auto &fn : ctx->commands)
+        fn->execute(ctx->ioCtx);
+      Iostat result = ctx->ioCtx.result;
+
+      ctx->~DeferredContext();
+      FreeMemory(ctx);
+
+      return result;
+    });
+    break;
+  case OutputAscii_Opcode:
+    rpc::invoke<NumLanes>(
+        port, [](Cookie cookie, const char *x, std::size_t length) -> bool {
+          return EnqueueDeferred(IODECL(OutputAscii), cookie,
+              DeferredFunctionBase::TempString(x), length);
+        });
+    break;
+  case OutputInteger8_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int8_t n) -> bool {
+      return EnqueueDeferred(IODECL(OutputInteger8), cookie, n);
+    });
+    break;
+  case OutputInteger16_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int16_t n) -> bool {
+      return EnqueueDeferred(IODECL(OutputInteger16), cookie, n);
+    });
+    break;
+  case OutputInteger32_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int32_t n) -> bool {
+      return EnqueueDeferred(IODECL(OutputInteger32), cookie, n);
+    });
+    break;
+  case OutputInteger64_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int64_t n) -> bool {
+      return EnqueueDeferred(IODECL(OutputInteger64), cookie, n);
+    });
+    break;
+#ifdef __SIZEOF_INT128__
+  case OutputInteger128_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, common::int128_t n) -> bool {
+      return EnqueueDeferred(IODECL(OutputInteger128), cookie, n);
+    });
+    break;
+#endif
+  case OutputReal32_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, float x) -> bool {
+      return EnqueueDeferred(IODECL(OutputReal32), cookie, x);
+    });
+    break;
+  case OutputReal64_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, double x) -> bool {
+      return EnqueueDeferred(IODECL(OutputReal64), cookie, x);
+    });
+    break;
+  case OutputComplex32_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, float re, float im) -> bool {
+      return EnqueueDeferred(IODECL(OutputComplex32), cookie, re, im);
+    });
+    break;
+  case OutputComplex64_Opcode:
+    rpc::invoke<NumLanes>(
+        port, [](Cookie cookie, double re, double im) -> bool {
+          return EnqueueDeferred(IODECL(OutputComplex64), cookie, re, im);
+        });
+    break;
+  case OutputLogical_Opcode:
+    rpc::invoke<NumLanes>(port, [](Cookie cookie, bool truth) -> bool {
+      return EnqueueDeferred(IODECL(OutputLogical), cookie, truth);
+    });
+    break;
+  default:
+    return rpc::RPC_UNHANDLED_OPCODE;
+  }
+
+  return rpc::RPC_SUCCESS;
+}
+} // namespace
+
+RT_EXT_API_GROUP_BEGIN
+std::uint32_t IODECL(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes) {
+  rpc::Server::Port &Port = *reinterpret_cast<rpc::Server::Port *>(raw);
+  if (numLanes == 1) {
+    return HandleOpcodesImpl<1>(Port);
+  }
+  if (numLanes == 32) {
+    return HandleOpcodesImpl<32>(Port);
+  }
+  if (numLanes == 64) {
+    return HandleOpcodesImpl<64>(Port);
+  }
+  return rpc::RPC_ERROR;
+}
+RT_EXT_API_GROUP_END
+} // namespace Fortran::runtime::io

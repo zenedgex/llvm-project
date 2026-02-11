@@ -44,3 +44,12 @@ void FreeMemory(void *p) { std::free(p); }
 
 RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime
+
+// Freestanding support of C++ sized new / delete usage.
+void *operator new(std::size_t size) {
+  return Fortran::runtime::AllocateMemoryOrCrash(
+      Fortran::runtime::Terminator{__FILE__, __LINE__}, size);
+}
+void operator delete(void *p, std::size_t) noexcept {
+  Fortran::runtime::FreeMemory(p);
+}

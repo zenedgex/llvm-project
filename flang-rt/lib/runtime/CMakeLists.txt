@@ -70,6 +70,7 @@ set(supported_sources
   unit.cpp
   utf.cpp
   work-queue.cpp
+  io-api-server.cpp
 )
 
 # List of source not used for GPU offloading.
@@ -137,6 +138,7 @@ set(gpu_sources
   reduce.cpp
   reduction.cpp
   temporary-stack.cpp
+  io-api-gpu.cpp
 )
 
 file(GLOB_RECURSE public_headers

@@ -44,7 +44,7 @@ template <typename A> RT_API_ATTRS void FreeMemoryAndNullify(A *&p) {
 // and does not support array objects with runtime length.
 template <typename A> class OwningPtr {
 public:
-  using pointer_type = A *;
+  using pointer_type = std::remove_extent_t<A> *;
 
   OwningPtr() = default;
   RT_API_ATTRS explicit OwningPtr(pointer_type p) : ptr_(p) {}

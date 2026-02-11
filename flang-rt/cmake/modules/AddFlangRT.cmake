@@ -122,6 +122,9 @@ function (add_flangrt_library name)
     list(APPEND extra_args EXCLUDE_FROM_ALL)
   endif ()
 
+  # Include the RPC utilities from the `libc` project.
+  include(FindLibcCommonUtils)
+
   # Also add header files to IDEs to list as part of the library.
   set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
 
@@ -139,11 +142,11 @@ function (add_flangrt_library name)
   endif ()
   if (build_static)
     add_library("${name_static}" STATIC ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static)
+    target_link_libraries("${name_static}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-static llvm-libc-common-utilities)
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
-    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared)
+    target_link_libraries("${name_shared}" PRIVATE flang-rt-libcxx-headers flang-rt-libc-headers flang-rt-libc-shared llvm-libc-common-utilities)
     if (Threads_FOUND) 
       target_link_libraries(${name_shared} PUBLIC Threads::Threads)
     endif ()
