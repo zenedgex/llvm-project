@@ -1982,7 +1982,7 @@ static bool tryToReplaceALMWithWideALM(VPlan &Plan, ElementCount VF,
     uint64_t Part;
     if (match(Index,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
-                  m_VPValue(), m_VPValue(), m_ConstantInt(Part))))
+                  m_VPValue(), m_Mul(m_VPValue(), m_ConstantInt(Part)))))
       Phis[Part] = Phi;
     else
       // Anything other than a CanonicalIVIncrementForPart is part 0

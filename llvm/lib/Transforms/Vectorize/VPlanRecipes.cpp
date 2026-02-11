@@ -534,14 +534,6 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   }
 }
 
-/// Returns `(zext/trunc V to Ty) * Ty(Const)`.
-static Value *scaleValueByConst(IRBuilderBase &B, Type *Ty, Value *V,
-                                int64_t Const) {
-  if (Const == 1)
-    return B.CreateZExtOrTrunc(V, Ty);
-  return B.CreateMul(ConstantInt::get(Ty, Const), B.CreateZExtOrTrunc(V, Ty));
-}
-
 Value *VPInstruction::generate(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
 
@@ -659,14 +651,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return EVL;
   }
   case VPInstruction::CanonicalIVIncrementForPart: {
-    unsigned Part = getUnrollPart(*this);
     auto *IV = State.get(getOperand(0), VPLane(0));
-    auto *VF = State.get(getOperand(1), VPLane(0));
-    assert(Part != 0 && "Must have a positive part");
+    auto *VFxPart = State.get(getOperand(1), VPLane(0));
     // The canonical IV is incremented by the vectorization factor (num of
     // SIMD elements) times the unroll part.
-    Value *Step = scaleValueByConst(Builder, IV->getType(), VF, Part);
-    return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
+    return Builder.CreateAdd(IV, VFxPart, Name, hasNoUnsignedWrap(),
                              hasNoSignedWrap());
   }
   case VPInstruction::BranchOnCond: {
