@@ -2828,6 +2828,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
 
   // Create the ActiveLaneMask instruction using the correct start values.
   VPValue *TC = Plan.getTripCount();
+  VPValue *VFxUF = &Plan.getVFxUF();
   VPValue *VF = &Plan.getVF();
 
   VPValue *TripCount, *IncrementValue;
@@ -2843,7 +2844,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
     // done after the active.lane.mask intrinsic is called.
     IncrementValue = CanonicalIVPHI;
     TripCount = Builder.createNaryOp(VPInstruction::CalculateTripCountMinusVF,
-                                     {TC, VF}, DL);
+                                     {TC, VFxUF}, DL);
   }
   auto *EntryIncrement = Builder.createOverflowingOp(
       VPInstruction::CanonicalIVIncrementForPart, {StartV, VF}, {false, false},

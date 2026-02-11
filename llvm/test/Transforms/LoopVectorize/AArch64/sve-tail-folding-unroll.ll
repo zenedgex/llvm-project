@@ -13,9 +13,8 @@ define void @simple_memset(i32 %val, ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP61:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP61]], 2
 ; CHECK-NEXT:    [[TMP62:%.*]] = shl nuw i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 4, [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP62]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[INDEX_PART_NEXT:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = mul i64 2, [[TMP1]]
@@ -87,9 +86,8 @@ define void @cond_memset(i32 %val, ptr noalias readonly %cond_ptr, ptr noalias %
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP5]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 4, [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[UMAX]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[UMAX]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
 ; CHECK-NEXT:    [[INDEX_PART_NEXT:%.*]] = add i64 0, [[TMP1]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = mul i64 2, [[TMP1]]

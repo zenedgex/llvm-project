@@ -534,6 +534,14 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   }
 }
 
+/// Returns `(zext/trunc V to Ty) * Ty(Const)`.
+static Value *scaleValueByConst(IRBuilderBase &B, Type *Ty, Value *V,
+                                int64_t Const) {
+  if (Const == 1)
+    return B.CreateZExtOrTrunc(V, Ty);
+  return B.CreateMul(ConstantInt::get(Ty, Const), B.CreateZExtOrTrunc(V, Ty));
+}
+
 Value *VPInstruction::generate(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
 
@@ -626,12 +634,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateVectorSpliceRight(V1, V2, 1, Name);
   }
   case VPInstruction::CalculateTripCountMinusVF: {
-    unsigned UF = getParent()->getPlan()->getUF();
     Value *ScalarTC = State.get(getOperand(0), VPLane(0));
-    Value *VF = State.get(getOperand(1), VPLane(0));
-    Value *Step = scaleValueByConst(Builder, ScalarTC->getType(), VF, UF);
-    Value *Sub = Builder.CreateSub(ScalarTC, Step);
-    Value *Cmp = Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, Step);
+    Value *VFxUF = State.get(getOperand(1), VPLane(0));
+    Value *Sub = Builder.CreateSub(ScalarTC, VFxUF);
+    Value *Cmp =
+        Builder.CreateICmp(CmpInst::Predicate::ICMP_UGT, ScalarTC, VFxUF);
     Value *Zero = ConstantInt::getNullValue(ScalarTC->getType());
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
