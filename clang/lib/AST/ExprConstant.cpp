@@ -18494,6 +18494,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
 }
 
 bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
+  Info.Ctx.recordOffsetOfEvaluation(OOE);
   CharUnits Result;
   unsigned n = OOE->getNumComponents();
   if (n == 0)
