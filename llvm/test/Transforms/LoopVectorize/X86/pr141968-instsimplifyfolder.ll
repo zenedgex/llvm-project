@@ -14,6 +14,7 @@ define void @pr141968(i1 %cond, i8 %v, ptr %p) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i1> poison, i1 [[COND]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i1> [[BROADCAST_SPLATINSERT]], <16 x i1> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = xor <16 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[COND]], i8 0, i8 [[V]]
 ; CHECK-NEXT:    br label %[[COND_FALSE:.*]]
 ; CHECK:       [[COND_FALSE]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE30:.*]] ]
@@ -97,7 +98,6 @@ define void @pr141968(i1 %cond, i8 %v, ptr %p) {
 ; CHECK:       [[PRED_SDIV_IF29]]:
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE30]]
 ; CHECK:       [[PRED_SDIV_CONTINUE30]]:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[COND]], i8 0, i8 [[V]]
 ; CHECK-NEXT:    store i8 [[PREDPHI]], ptr [[P]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
