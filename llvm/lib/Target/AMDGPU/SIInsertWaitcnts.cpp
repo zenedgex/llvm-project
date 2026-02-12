@@ -3233,7 +3233,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
       assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
       ScoreBrackets.recordAsyncMark(Inst);
-      ++Iter;
       continue;
     }
 
