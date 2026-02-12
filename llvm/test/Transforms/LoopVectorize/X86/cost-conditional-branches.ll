@@ -697,6 +697,11 @@ define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <32 x i1> poison, i1 [[CMP_I]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <32 x i1> [[BROADCAST_SPLATINSERT]], <32 x i1> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP60:%.*]] = xor <32 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[CMP_I]], <32 x i32> zeroinitializer, <32 x i32> poison
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <32 x i32> [[PREDPHI]], i32 0
+; CHECK-NEXT:    [[TMP34:%.*]] = ashr i32 [[CONV5_I]], [[TMP33]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT63:%.*]] = insertelement <32 x i32> poison, i32 [[TMP34]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT64:%.*]] = shufflevector <32 x i32> [[BROADCAST_SPLATINSERT63]], <32 x i32> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[LOOP_HEADER1:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UREM_CONTINUE62:%.*]] ]
@@ -860,11 +865,6 @@ define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
 ; CHECK:       pred.urem.if61:
 ; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE62]]
 ; CHECK:       pred.urem.continue62:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[CMP_I]], <32 x i32> zeroinitializer, <32 x i32> poison
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <32 x i32> [[PREDPHI]], i32 0
-; CHECK-NEXT:    [[TMP34:%.*]] = ashr i32 [[CONV5_I]], [[TMP33]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT63:%.*]] = insertelement <32 x i32> poison, i32 [[TMP34]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT64:%.*]] = shufflevector <32 x i32> [[BROADCAST_SPLATINSERT63]], <32 x i32> poison, <32 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP35:%.*]] = icmp eq i32 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP35]], label [[MIDDLE_BLOCK:%.*]], label [[LOOP_HEADER1]], !llvm.loop [[LOOP10:![0-9]+]]
@@ -886,34 +886,34 @@ define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT66:%.*]] = insertelement <4 x i1> poison, i1 [[CMP_I]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT67:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT66]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP44:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT67]], splat (i1 true)
-; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
-; CHECK:       vec.epilog.vector.body:
-; CHECK-NEXT:    [[INDEX68:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT78:%.*]], [[PRED_UREM_CONTINUE76:%.*]] ]
-; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i1> [[TMP44]], i32 0
-; CHECK-NEXT:    br i1 [[TMP45]], label [[PRED_UREM_IF69:%.*]], label [[PRED_UREM_CONTINUE70:%.*]]
-; CHECK:       pred.urem.if69:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE70]]
-; CHECK:       pred.urem.continue70:
-; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <4 x i1> [[TMP44]], i32 1
-; CHECK-NEXT:    br i1 [[TMP46]], label [[PRED_UREM_IF71:%.*]], label [[PRED_UREM_CONTINUE72:%.*]]
-; CHECK:       pred.urem.if71:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE72]]
-; CHECK:       pred.urem.continue72:
-; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i1> [[TMP44]], i32 2
-; CHECK-NEXT:    br i1 [[TMP47]], label [[PRED_UREM_IF73:%.*]], label [[PRED_UREM_CONTINUE74:%.*]]
-; CHECK:       pred.urem.if73:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE74]]
-; CHECK:       pred.urem.continue74:
-; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP44]], i32 3
-; CHECK-NEXT:    br i1 [[TMP48]], label [[PRED_UREM_IF75:%.*]], label [[PRED_UREM_CONTINUE76]]
-; CHECK:       pred.urem.if75:
-; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE76]]
-; CHECK:       pred.urem.continue76:
 ; CHECK-NEXT:    [[PREDPHI77:%.*]] = select i1 [[CMP_I]], <4 x i32> zeroinitializer, <4 x i32> poison
 ; CHECK-NEXT:    [[TMP49:%.*]] = extractelement <4 x i32> [[PREDPHI77]], i32 0
 ; CHECK-NEXT:    [[TMP50:%.*]] = ashr i32 [[CONV5_I]], [[TMP49]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT79:%.*]] = insertelement <4 x i32> poison, i32 [[TMP50]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT80:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT79]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
+; CHECK:       vec.epilog.vector.body:
+; CHECK-NEXT:    [[INDEX68:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT78:%.*]], [[PRED_UREM_CONTINUE76:%.*]] ]
+; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i1> [[TMP44]], i32 0
+; CHECK-NEXT:    br i1 [[TMP45]], label [[PRED_UREM_IF69:%.*]], label [[PRED_UREM_CONTINUE70:%.*]]
+; CHECK:       pred.urem.if70:
+; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE70]]
+; CHECK:       pred.urem.continue71:
+; CHECK-NEXT:    [[TMP46:%.*]] = extractelement <4 x i1> [[TMP44]], i32 1
+; CHECK-NEXT:    br i1 [[TMP46]], label [[PRED_UREM_IF71:%.*]], label [[PRED_UREM_CONTINUE72:%.*]]
+; CHECK:       pred.urem.if72:
+; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE72]]
+; CHECK:       pred.urem.continue73:
+; CHECK-NEXT:    [[TMP47:%.*]] = extractelement <4 x i1> [[TMP44]], i32 2
+; CHECK-NEXT:    br i1 [[TMP47]], label [[PRED_UREM_IF73:%.*]], label [[PRED_UREM_CONTINUE74:%.*]]
+; CHECK:       pred.urem.if74:
+; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE74]]
+; CHECK:       pred.urem.continue75:
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP44]], i32 3
+; CHECK-NEXT:    br i1 [[TMP48]], label [[PRED_UREM_IF75:%.*]], label [[PRED_UREM_CONTINUE76]]
+; CHECK:       pred.urem.if76:
+; CHECK-NEXT:    br label [[PRED_UREM_CONTINUE76]]
+; CHECK:       pred.urem.continue77:
 ; CHECK-NEXT:    [[INDEX_NEXT78]] = add nuw i32 [[INDEX68]], 4
 ; CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i32 [[INDEX_NEXT78]], 100
 ; CHECK-NEXT:    br i1 [[TMP51]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
