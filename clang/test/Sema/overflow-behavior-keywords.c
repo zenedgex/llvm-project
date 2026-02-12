@@ -64,3 +64,7 @@ typedef double __ob_trap double_trap; // expected-error{{__ob_trap specifier can
 
 struct S { int i; };
 typedef struct S __ob_wrap struct_wrap; // expected-error{{__ob_wrap specifier cannot be applied to non-integer type 'struct S'}}
+
+__ob_trap struct S2 { // expected-error{{__ob_trap specifier cannot be applied to non-integer type 'struct S2'}}
+  int a;
+} s2;

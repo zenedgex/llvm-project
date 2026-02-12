@@ -15,7 +15,7 @@ typedef char __attribute__((overflow_behavior("trap"))) str_ok_nowrap; // OK
 
 struct struct_not_allowed {
   int i;
-} __attribute__((overflow_behavior(wrap))); // expected-warning {{'overflow_behavior' attribute only applies to variables, typedefs, and non-static data members}}
+} __attribute__((overflow_behavior(wrap))); // expected-warning {{'overflow_behavior' attribute only applies to variables, typedefs, and data members}}
 
 void foo() {
   (2147483647 + 100); // expected-warning {{overflow in expression; result is }}
@@ -176,3 +176,15 @@ void constant_conversion() {
   unsigned short __ob_trap ux4 = (unsigned int __ob_trap)100000; // expected-warning {{implicit conversion from '__ob_trap unsigned int' to '__ob_trap unsigned short' changes value from 100000 to 34464}}
   unsigned short __ob_trap ux5 = (unsigned int __ob_wrap)100000; // expected-error {{assigning to '__ob_trap unsigned short' from '__ob_wrap unsigned int' with incompatible overflow behavior types ('__ob_trap' and '__ob_wrap')}}
 }
+
+// OBT on data members (both static and non-static)
+struct DataMembers {
+  __ob_wrap int nonstatic_specifier;
+  int __attribute__((overflow_behavior(wrap))) nonstatic_attr;
+  static __ob_trap int static_specifier;
+  static int __ob_wrap static_specifier2;
+  static int __attribute__((overflow_behavior(trap))) static_attr;
+};
+__ob_trap int DataMembers::static_specifier = 0;
+int __ob_wrap DataMembers::static_specifier2 = 0;
+int __attribute__((overflow_behavior(trap))) DataMembers::static_attr = 0;
