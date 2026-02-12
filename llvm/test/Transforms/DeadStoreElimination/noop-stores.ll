@@ -1195,7 +1195,6 @@ define void @remove_tautological_store_multi_preds(ptr %p) {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[L2]], 0
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[THEN]], label [[EXIT:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
