@@ -169,6 +169,14 @@ Changes in existing checks
   the invalidating function in the warning message when a custom invalidation
   function is used (via the `InvalidationFunctions` option).
 
+- Improved :doc:`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by:
+
+  - Correctly handling forwarding in deeply nested lambdas.
+
+  - Fixing a false negative when multiple parameters are used in a lambda and
+    only some of them are forwarded.
+
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
   warning on builtins with custom type checking (e.g., type-generic builtins
