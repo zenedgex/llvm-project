@@ -1856,6 +1856,18 @@ static GlobalDecl getParentOfLocalEntity(const DeclContext *DC) {
   return GD;
 }
 
+// Build a parent GlobalDecl for unqualified-name mangling, preserving
+// constructor/destructor complete-object structor kinds.
+static GlobalDecl getParentGlobalDecl(const NamedDecl *ND) {
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(ND))
+    return GlobalDecl(CD, Ctor_Complete);
+  if (const auto *DD = dyn_cast<CXXDestructorDecl>(ND))
+    return GlobalDecl(DD, Dtor_Complete);
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+    return GlobalDecl(FD);
+  return GlobalDecl(ND);
+}
+
 void CXXNameMangler::mangleLocalName(GlobalDecl GD,
                                      const AbiTagList *AdditionalAbiTags) {
   const Decl *D = GD.getDecl();
@@ -2195,18 +2207,20 @@ void CXXNameMangler::manglePrefix(const DeclContext *DC, bool NoFunction) {
   if (mangleSubstitution(ND))
     return;
 
+  GlobalDecl ParentGD = getParentGlobalDecl(ND);
+
   // Check if we have a template-prefix or a closure-prefix.
   const TemplateArgumentList *TemplateArgs = nullptr;
-  if (GlobalDecl TD = isTemplate(ND, TemplateArgs)) {
+  if (GlobalDecl TD = isTemplate(ParentGD, TemplateArgs)) {
     mangleTemplatePrefix(TD);
     mangleTemplateArgs(asTemplateName(TD), *TemplateArgs);
   } else if (const NamedDecl *PrefixND = getClosurePrefix(ND)) {
     mangleClosurePrefix(PrefixND, NoFunction);
-    mangleUnqualifiedName(ND, nullptr, nullptr);
+    mangleUnqualifiedName(ParentGD, nullptr, nullptr);
   } else {
     const DeclContext *DC = Context.getEffectiveDeclContext(ND);
     manglePrefix(DC, NoFunction);
-    mangleUnqualifiedName(ND, DC, nullptr);
+    mangleUnqualifiedName(ParentGD, DC, nullptr);
   }
 
   addSubstitution(ND);
@@ -2299,14 +2313,16 @@ void CXXNameMangler::mangleClosurePrefix(const NamedDecl *ND, bool NoFunction) {
   if (mangleSubstitution(ND))
     return;
 
+  GlobalDecl ParentGD = getParentGlobalDecl(ND);
+
   const TemplateArgumentList *TemplateArgs = nullptr;
-  if (GlobalDecl TD = isTemplate(ND, TemplateArgs)) {
+  if (GlobalDecl TD = isTemplate(ParentGD, TemplateArgs)) {
     mangleTemplatePrefix(TD, NoFunction);
     mangleTemplateArgs(asTemplateName(TD), *TemplateArgs);
   } else {
     const auto *DC = Context.getEffectiveDeclContext(ND);
     manglePrefix(DC, NoFunction);
-    mangleUnqualifiedName(ND, DC, nullptr);
+    mangleUnqualifiedName(ParentGD, DC, nullptr);
   }
 
   Out << 'M';
