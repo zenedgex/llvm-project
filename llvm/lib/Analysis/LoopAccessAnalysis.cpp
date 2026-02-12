@@ -2524,12 +2524,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
 
   const bool IsAnnotatedParallel = TheLoop->isAnnotatedParallel();
 
-  if (IsAnnotatedParallel) {
-    LLVM_DEBUG(
-        dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
-               << "checks.\n");
-  }
-
   const bool EnableMemAccessVersioningOfLoop =
       EnableMemAccessVersioning &&
       !TheLoop->getHeader()->getParent()->hasOptSize();
@@ -2599,29 +2593,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           HasComplexMemInst = true;
           continue;
         }
-
-        // For parallel loops, we only want to analyze alloca-based addresses.
-        // If the loop accesses an alloca that is outside of the loop, it is
-        // possible that the alloca was initially related to a loop-local
-        // variable but got hoisted outside during e.g. inlining or some other
-        // parallel-loop-unaware pass. However, if the alloca itself has been
-        // marked with the access group metadata, this usage has to be assumed
-        // to be valid.
-        if (IsAnnotatedParallel) {
-          AllocaInst *AI = findAllocaForValue(Ld->getPointerOperand());
-          // Not accessing alloca, or the alloca is inside the loop, so no race
-          // condition there.
-          if (!AI || TheLoop->contains(AI))
-            continue;
-
-          MDNode *AG = AI->getMetadata(LLVMContext::MD_access_group);
-          // Access group is annotated properly for this loop, assume no race
-          // condition.
-          if (AG && TheLoop->containsAccessGroup(AG))
-            continue;
-
-          // Otherwise, proceed handling the load as if the loop isn't parallel.
-        }
         NumLoads++;
         Loads.push_back(Ld);
         DepChecker->addAccess(Ld);
@@ -2645,14 +2616,6 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
           LLVM_DEBUG(dbgs() << "LAA: Found a non-simple store.\n");
           HasComplexMemInst = true;
           continue;
-        }
-        if (IsAnnotatedParallel) {
-          AllocaInst *AI = findAllocaForValue(St->getPointerOperand());
-          if (!AI || TheLoop->contains(AI))
-            continue;
-          MDNode *AG = AI->getMetadata(LLVMContext::MD_access_group);
-          if (AG && TheLoop->containsAccessGroup(AG))
-            continue;
         }
         NumStores++;
         Stores.push_back(St);
@@ -2720,6 +2683,13 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
                       Accesses.addStore(NewLoc, AccessTy);
                     });
     }
+  }
+
+  if (IsAnnotatedParallel) {
+    LLVM_DEBUG(
+        dbgs() << "LAA: A loop annotated parallel, ignore memory dependency "
+               << "checks.\n");
+    return true;
   }
 
   for (LoadInst *LD : Loads) {

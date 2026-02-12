@@ -341,10 +341,6 @@ public:
   /// iterations.
   bool isAnnotatedParallel() const;
 
-  /// Returns true if the loop's parallel_accesses metadata contains the given
-  /// access group.
-  bool containsAccessGroup(MDNode* AG) const;
-
   /// Return the llvm.loop loop id metadata node for this loop if it is present.
   ///
   /// If this loop contains the same llvm.loop metadata on each branch to the
