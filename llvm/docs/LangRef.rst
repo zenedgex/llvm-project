@@ -8176,10 +8176,10 @@ as it is not affected by the ``llvm.loop.disable_nonforced`` metadata.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``llvm.access.group`` metadata can be attached to any instruction that
-potentially accesses memory. It can point to a single distinct metadata
-node, which we call access group. This node represents all memory access
-instructions referring to it via ``llvm.access.group``. When an
-instruction belongs to multiple access groups, it can also point to a
+potentially accesses or allocates memory. It can point to a single distinct
+metadata node, which we call access group. This node represents all memory
+access or allocation instructions referring to it via ``llvm.access.group``.
+When an instruction belongs to multiple access groups, it can also point to a
 list of accesses groups, illustrated by the following example.
 
 .. code-block:: llvm
@@ -8201,8 +8201,8 @@ situation that the content must be updated which, because metadata is
 immutable by design, would required finding and updating all references
 to the access group node.
 
-The access group can be used to refer to a memory access instruction
-without pointing to it directly (which is not possible in global
+The access group can be used to refer to a memory access or allocation
+instruction without pointing to it directly (which is not possible in global
 metadata). Currently, the only metadata making use of it is
 ``llvm.loop.parallel_accesses``.
 
@@ -8223,12 +8223,12 @@ this loop. Instructions that belong to multiple access groups are
 considered having this property if at least one of the access groups
 matches the ``llvm.loop.parallel_accesses`` list.
 
-If all memory-accessing instructions in a loop have
-``llvm.access.group`` metadata that each refer to one of the access
-groups of a loop's ``llvm.loop.parallel_accesses`` metadata, then the
-loop has no loop carried memory dependencies and is considered to be a
-parallel loop. If there is a loop-carried dependency, the behavior is
-undefined.
+If all memory-accessing instructions in a loop and all ``alloca`` instructions
+whose address range is being written to by instructions in the loop have
+``llvm.access.group`` metadata referring to one of the access groups of a loop's
+``llvm.loop.parallel_accesses`` metadata, then the loop has no loop carried
+memory dependencies and is considered to be a parallel loop. If there is a
+loop-carried dependency, the behavior is undefined.
 
 Note that if not all memory access instructions belong to an access
 group referred to by ``llvm.loop.parallel_accesses``, then the loop must
