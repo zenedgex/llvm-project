@@ -604,7 +604,8 @@ public:
   }
 
   // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM
-  // instruction.
+  // instruction that is not an invalidate or WB instruction, which are
+  // checked for using getInvOrWBWaitEventType().
   WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
     switch (Inst.getOpcode()) {
     // FIXME: GLOBAL_INV needs to be tracked with xcnt too.
@@ -617,7 +618,6 @@ public:
     default:
       break;
     }
-
     // Maps VMEM access types to their corresponding WaitEventType.
     static const WaitEventType VmemReadMapping[NUM_VMEM_TYPES] = {
         VMEM_ACCESS, VMEM_SAMPLER_READ_ACCESS, VMEM_BVH_READ_ACCESS};
@@ -2751,7 +2751,8 @@ SIInsertWaitcnts::getExpertSchedulingEventType(const MachineInstr &Inst) const {
 }
 
 bool SIInsertWaitcnts::isVmemAccess(const MachineInstr &MI) const {
-  return (TII->isFLAT(MI) && TII->mayAccessVMEMThroughFlat(MI)) ||
+  return (TII->isFLAT(MI) && SIInstrInfo::usesVM_CNT(MI) &&
+          TII->mayAccessVMEMThroughFlat(MI)) ||
          (TII->isVMEM(MI) && !AMDGPU::getMUBUFIsBufferInv(MI.getOpcode()));
 }
 
@@ -2840,19 +2841,14 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
-    if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
-      ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
-      return;
-    }
-
-    assert(Inst.mayLoadOrStore());
-
     int FlatASCount = 0;
 
-    if (TII->mayAccessVMEMThroughFlat(Inst)) {
-      ++FlatASCount;
-      IsVMEMAccess = true;
+    if (SIInstrInfo::usesVM_CNT(Inst)) {
       ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
+      if (TII->mayAccessVMEMThroughFlat(Inst)) {
+        ++FlatASCount;
+        IsVMEMAccess = true;
+      }
     }
 
     if (TII->mayAccessLDSThroughFlat(Inst)) {
@@ -3371,7 +3367,7 @@ SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
 
 bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
   if (SIInstrInfo::isFLAT(MI))
-    return TII->mayAccessVMEMThroughFlat(MI);
+    return SIInstrInfo::usesVM_CNT(MI) && TII->mayAccessVMEMThroughFlat(MI);
   return SIInstrInfo::isVMEM(MI);
 }
 
