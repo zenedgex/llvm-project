@@ -946,9 +946,8 @@ static void PropagateCallSiteMetadata(CallBase &CB, Function::iterator FStart,
 
   for (BasicBlock &BB : make_range(FStart, FEnd)) {
     for (Instruction &I : BB) {
-      // This metadata is only relevant for instructions that access memory and
-      // alloca.
-      if (!I.mayReadOrWriteMemory() && !dyn_cast<AllocaInst>(&I))
+      // This metadata is only relevant for instructions that access memory.
+      if (!I.mayReadOrWriteMemory())
         continue;
 
       if (MemParallelLoopAccess) {
@@ -963,11 +962,6 @@ static void PropagateCallSiteMetadata(CallBase &CB, Function::iterator FStart,
       if (AccessGroup)
         I.setMetadata(LLVMContext::MD_access_group, uniteAccessGroups(
             I.getMetadata(LLVMContext::MD_access_group), AccessGroup));
-
-      // The rest of the metadata is only relevant for instructions accessing
-      // memory.
-      if (!I.mayReadOrWriteMemory())
-        continue;
 
       if (AliasScope)
         I.setMetadata(LLVMContext::MD_alias_scope, MDNode::concatenate(
