@@ -239,6 +239,9 @@ Improvements to Clang's diagnostics
 - Added a missing space to the FixIt for the ``implicit-int`` group of diagnostics and 
   made sure that only one such diagnostic and FixIt is emitted per declaration group. (#GH179354)
 
+- Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof 
+  the destination buffer(dynamically allocated) in the len parameter(#GH162366)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
