@@ -4576,13 +4576,13 @@ parseIteratorsHeader(OpAsmParser &parser, Region &region,
 
   llvm::SMLoc ivLoc = parser.getCurrentLocation();
   SmallVector<OpAsmParser::Argument> ivArgs;
-  
+
   // Parse induction variables: %i : i32, %j : i32
   if (parser.parseCommaSeparatedList([&]() -> ParseResult {
         OpAsmParser::Argument &arg = ivArgs.emplace_back();
         if (parser.parseArgument(arg))
           return failure();
-        
+
         // Optional type, default to Index if not provided
         if (succeeded(parser.parseOptionalColon())) {
           if (parser.parseType(arg.type))
@@ -4618,8 +4618,8 @@ parseIteratorsHeader(OpAsmParser &parser, Region &region,
 
   if (ivArgs.size() != lbs.size())
     return parser.emitError(ivLoc)
-           << "mismatch: " << ivArgs.size() << " variables but "
-           << lbs.size() << " ranges";
+           << "mismatch: " << ivArgs.size() << " variables but " << lbs.size()
+           << " ranges";
 
   for (auto &arg : ivArgs) {
     lbTypes.push_back(arg.type);
@@ -4662,7 +4662,7 @@ LogicalResult IteratorsOp::verify() {
 
   Block &b = getRegion().front();
   auto yield = llvm::dyn_cast<omp::YieldOp>(b.getTerminator());
-  
+
   if (!yield)
     return emitOpError() << "region must be terminated by omp.yield";
 
