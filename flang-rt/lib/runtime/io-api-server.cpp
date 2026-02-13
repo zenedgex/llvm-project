@@ -80,11 +80,9 @@ struct DeferredFunction final : DeferredFunctionBase {
 private:
   template <typename T> T &Rewrite(T &v, IOContext &) { return v; }
 
-  Cookie Rewrite(Cookie, IOContext &ctx) {
-    return reinterpret_cast<Cookie>(ctx.cookie);
-  }
-
   const char *Rewrite(OwningPtr<char[]> &p, IOContext &) { return p.get(); }
+
+  Cookie Rewrite(Cookie, IOContext &ctx) { return ctx.cookie; }
 };
 
 template <typename Fn, typename... Args>
@@ -124,7 +122,7 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
               DeferredContext;
 
           ctx->commands.emplace_back(
-              MakeDeferred(IODECL(BeginExternalListOutput), unitNumber,
+              MakeDeferred(IONAME(BeginExternalListOutput), unitNumber,
                   DeferredFunctionBase::TempString(sourceFile), sourceLine));
 
           return reinterpret_cast<Cookie>(ctx);
@@ -134,8 +132,7 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
     rpc::invoke<NumLanes>(port, [](Cookie cookie) -> Iostat {
       DeferredContext *ctx = reinterpret_cast<DeferredContext *>(cookie);
 
-      ctx->commands.emplace_back(
-          MakeDeferred(_FortranAioEndIoStatement, cookie));
+      ctx->commands.emplace_back(MakeDeferred(IONAME(EndIoStatement), cookie));
       for (auto &fn : ctx->commands)
         fn->execute(ctx->ioCtx);
       Iostat result = ctx->ioCtx.result;
@@ -149,61 +146,61 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
   case OutputAscii_Opcode:
     rpc::invoke<NumLanes>(
         port, [](Cookie cookie, const char *x, std::size_t length) -> bool {
-          return EnqueueDeferred(IODECL(OutputAscii), cookie,
+          return EnqueueDeferred(IONAME(OutputAscii), cookie,
               DeferredFunctionBase::TempString(x), length);
         });
     break;
   case OutputInteger8_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int8_t n) -> bool {
-      return EnqueueDeferred(IODECL(OutputInteger8), cookie, n);
+      return EnqueueDeferred(IONAME(OutputInteger8), cookie, n);
     });
     break;
   case OutputInteger16_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int16_t n) -> bool {
-      return EnqueueDeferred(IODECL(OutputInteger16), cookie, n);
+      return EnqueueDeferred(IONAME(OutputInteger16), cookie, n);
     });
     break;
   case OutputInteger32_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int32_t n) -> bool {
-      return EnqueueDeferred(IODECL(OutputInteger32), cookie, n);
+      return EnqueueDeferred(IONAME(OutputInteger32), cookie, n);
     });
     break;
   case OutputInteger64_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, std::int64_t n) -> bool {
-      return EnqueueDeferred(IODECL(OutputInteger64), cookie, n);
+      return EnqueueDeferred(IONAME(OutputInteger64), cookie, n);
     });
     break;
 #ifdef __SIZEOF_INT128__
   case OutputInteger128_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, common::int128_t n) -> bool {
-      return EnqueueDeferred(IODECL(OutputInteger128), cookie, n);
+      return EnqueueDeferred(IONAME(OutputInteger128), cookie, n);
     });
     break;
 #endif
   case OutputReal32_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, float x) -> bool {
-      return EnqueueDeferred(IODECL(OutputReal32), cookie, x);
+      return EnqueueDeferred(IONAME(OutputReal32), cookie, x);
     });
     break;
   case OutputReal64_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, double x) -> bool {
-      return EnqueueDeferred(IODECL(OutputReal64), cookie, x);
+      return EnqueueDeferred(IONAME(OutputReal64), cookie, x);
     });
     break;
   case OutputComplex32_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, float re, float im) -> bool {
-      return EnqueueDeferred(IODECL(OutputComplex32), cookie, re, im);
+      return EnqueueDeferred(IONAME(OutputComplex32), cookie, re, im);
     });
     break;
   case OutputComplex64_Opcode:
     rpc::invoke<NumLanes>(
         port, [](Cookie cookie, double re, double im) -> bool {
-          return EnqueueDeferred(IODECL(OutputComplex64), cookie, re, im);
+          return EnqueueDeferred(IONAME(OutputComplex64), cookie, re, im);
         });
     break;
   case OutputLogical_Opcode:
     rpc::invoke<NumLanes>(port, [](Cookie cookie, bool truth) -> bool {
-      return EnqueueDeferred(IODECL(OutputLogical), cookie, truth);
+      return EnqueueDeferred(IONAME(OutputLogical), cookie, truth);
     });
     break;
   default:
@@ -215,7 +212,7 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
 } // namespace
 
 RT_EXT_API_GROUP_BEGIN
-std::uint32_t IODECL(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes) {
+std::uint32_t IONAME(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes) {
   rpc::Server::Port &Port = *reinterpret_cast<rpc::Server::Port *>(raw);
   if (numLanes == 1) {
     return HandleOpcodesImpl<1>(Port);

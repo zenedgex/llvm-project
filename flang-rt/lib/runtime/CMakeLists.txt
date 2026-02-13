@@ -70,7 +70,6 @@ set(supported_sources
   unit.cpp
   utf.cpp
   work-queue.cpp
-  io-api-server.cpp
 )
 
 # List of source not used for GPU offloading.
@@ -90,6 +89,7 @@ set(host_sources
   temporary-stack.cpp
   time-intrinsic.cpp
   unit-map.cpp
+  io-api-server.cpp
 )
 
 # Sources that can be compiled directly for the GPU.

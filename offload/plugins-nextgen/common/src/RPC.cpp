@@ -118,7 +118,7 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
 #if __has_include("flang/Runtime/io-api.h")
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = static_cast<rpc::Status>(
-        Fortran::runtime::io::IODECL(HandleRPCOpcodes)(&*Port, NumLanes));
+        Fortran::runtime::io::IONAME(HandleRPCOpcodes)(&*Port, NumLanes));
 #endif
 
   Port->close();
