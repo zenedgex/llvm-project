@@ -27,72 +27,72 @@ namespace Fortran::runtime::io {
 
 RT_EXT_API_GROUP_BEGIN
 
-Cookie IODEF(BeginExternalListOutput)(
+Cookie IONAME(BeginExternalListOutput)(
     ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return rpc::dispatch<BeginExternalListOutput_Opcode>(client,
-      IODEF(BeginExternalListOutput), unitNumber, sourceFile, sourceLine);
+      IONAME(BeginExternalListOutput), unitNumber, sourceFile, sourceLine);
 }
 
-enum Iostat IODEF(EndIoStatement)(Cookie cookie) {
+enum Iostat IONAME(EndIoStatement)(Cookie cookie) {
   return rpc::dispatch<EndIoStatement_Opcode>(
-      client, IODEF(EndIoStatement), cookie);
+      client, IONAME(EndIoStatement), cookie);
 }
 
-bool IODEF(OutputInteger8)(Cookie cookie, std::int8_t n) {
+bool IONAME(OutputInteger8)(Cookie cookie, std::int8_t n) {
   return rpc::dispatch<OutputInteger8_Opcode>(
-      client, IODEF(OutputInteger8), cookie, n);
+      client, IONAME(OutputInteger8), cookie, n);
 }
 
-bool IODEF(OutputInteger16)(Cookie cookie, std::int16_t n) {
+bool IONAME(OutputInteger16)(Cookie cookie, std::int16_t n) {
   return rpc::dispatch<OutputInteger16_Opcode>(
-      client, IODEF(OutputInteger16), cookie, n);
+      client, IONAME(OutputInteger16), cookie, n);
 }
 
-bool IODEF(OutputInteger32)(Cookie cookie, std::int32_t n) {
+bool IONAME(OutputInteger32)(Cookie cookie, std::int32_t n) {
   return rpc::dispatch<OutputInteger32_Opcode>(
-      client, IODEF(OutputInteger32), cookie, n);
+      client, IONAME(OutputInteger32), cookie, n);
 }
 
-bool IODEF(OutputInteger64)(Cookie cookie, std::int64_t n) {
+bool IONAME(OutputInteger64)(Cookie cookie, std::int64_t n) {
   return rpc::dispatch<OutputInteger64_Opcode>(
-      client, IODEF(OutputInteger64), cookie, n);
+      client, IONAME(OutputInteger64), cookie, n);
 }
 
 #ifdef __SIZEOF_INT128__
-bool IODEF(OutputInteger128)(Cookie cookie, common::int128_t n) {
+bool IONAME(OutputInteger128)(Cookie cookie, common::int128_t n) {
   return rpc::dispatch<OutputInteger128_Opcode>(
-      client, IODEF(OutputInteger128), cookie, n);
+      client, IONAME(OutputInteger128), cookie, n);
 }
 #endif
 
-bool IODEF(OutputReal32)(Cookie cookie, float x) {
+bool IONAME(OutputReal32)(Cookie cookie, float x) {
   return rpc::dispatch<OutputReal32_Opcode>(
-      client, IODEF(OutputReal32), cookie, x);
+      client, IONAME(OutputReal32), cookie, x);
 }
 
-bool IODEF(OutputReal64)(Cookie cookie, double x) {
+bool IONAME(OutputReal64)(Cookie cookie, double x) {
   return rpc::dispatch<OutputReal64_Opcode>(
-      client, IODEF(OutputReal64), cookie, x);
+      client, IONAME(OutputReal64), cookie, x);
 }
 
-bool IODEF(OutputComplex32)(Cookie cookie, float re, float im) {
+bool IONAME(OutputComplex32)(Cookie cookie, float re, float im) {
   return rpc::dispatch<OutputComplex32_Opcode>(
-      client, IODEF(OutputComplex32), cookie, re, im);
+      client, IONAME(OutputComplex32), cookie, re, im);
 }
 
-bool IODEF(OutputComplex64)(Cookie cookie, double re, double im) {
+bool IONAME(OutputComplex64)(Cookie cookie, double re, double im) {
   return rpc::dispatch<OutputComplex64_Opcode>(
-      client, IODEF(OutputComplex64), cookie, re, im);
+      client, IONAME(OutputComplex64), cookie, re, im);
 }
 
-bool IODEF(OutputAscii)(Cookie cookie, const char *x, std::size_t length) {
+bool IONAME(OutputAscii)(Cookie cookie, const char *x, std::size_t length) {
   return rpc::dispatch<OutputAscii_Opcode>(
-      client, IODEF(OutputAscii), cookie, x, length);
+      client, IONAME(OutputAscii), cookie, x, length);
 }
 
-bool IODEF(OutputLogical)(Cookie cookie, bool truth) {
+bool IONAME(OutputLogical)(Cookie cookie, bool truth) {
   return rpc::dispatch<OutputLogical_Opcode>(
-      client, IODEF(OutputLogical), cookie, truth);
+      client, IONAME(OutputLogical), cookie, truth);
 }
 
 RT_EXT_API_GROUP_END
