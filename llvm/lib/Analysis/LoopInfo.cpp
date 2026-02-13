@@ -618,7 +618,7 @@ bool Loop::isAnnotatedParallel() const {
         if (AI) {
           MDNode *AccessGroup = AI->getMetadata(LLVMContext::MD_access_group);
           if (AI && !contains(AI) &&
-                  (!AccessGroup || !ContainsAccessGroup(AccessGroup)))
+              (!AccessGroup || !ContainsAccessGroup(AccessGroup)))
             return false;
         }
       }
