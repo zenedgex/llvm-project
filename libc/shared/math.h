@@ -73,6 +73,7 @@
 #include "math/fsqrt.h"
 #include "math/fsqrtf128.h"
 #include "math/fsqrtl.h"
+#include "math/hypot.h"
 #include "math/hypotf.h"
 #include "math/ilogb.h"
 #include "math/ilogbf.h"

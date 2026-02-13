@@ -3849,6 +3849,15 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "___support_math_hypot",
+    hdrs = ["src/__support/math/hypot.h"],
+    deps = [
+        ":___support_common",
+        ":___support_fputil_hypot",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinhf",
     hdrs = ["src/__support/math/sinhf.h"],
     deps = [

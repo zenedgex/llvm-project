@@ -1146,6 +1146,16 @@ add_header_library(
 )
 
 add_header_library(
+  hypot
+  HDRS
+    hypot.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.hypot
+)
+
+add_header_library(
   ilogbl
   HDRS
     ilogbl.h

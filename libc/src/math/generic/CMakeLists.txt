@@ -3269,7 +3269,7 @@ add_entrypoint_object(
   HDRS
     ../hypot.h
   DEPENDS
-    libc.src.__support.FPUtil.hypot
+    libc.src.__support.math.hypot
 )
 
 add_entrypoint_object(
