@@ -5847,27 +5847,70 @@ InputInfoList Driver::BuildJobsForAction(
 
 static void handleTimeTrace(Compilation &C, const ArgList &Args,
                             const JobAction *JA, const char *BaseInput,
-                            const InputInfo &Result) {
+                            const InputInfo &Result, const ToolChain *TC,
+                            StringRef BoundArch, bool AtTopLevel) {
   Arg *A =
       Args.getLastArg(options::OPT_ftime_trace, options::OPT_ftime_trace_EQ);
   if (!A)
     return;
+
+  // Build the offloading prefix from the job action's offloading context.
+  // For device actions, this produces e.g. "-hip-amdgcn-amd-amdhsa-gfx906".
+  // For host actions that are not at top level (e.g. --save-temps with
+  // offloading), this produces e.g. "-host-x86_64-unknown-linux-gnu".
+  // For top-level host actions, no prefix is generated.
+  std::string OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
+      JA->getOffloadingDeviceKind(),
+      TC ? TC->getTriple().normalize() : "",
+      /*CreatePrefixForHost=*/
+          !(JA->getOffloadingHostActiveKinds() == Action::OFK_None ||
+            AtTopLevel));
+  if (!OffloadingPrefix.empty() && !BoundArch.empty()) {
+    OffloadingPrefix += "-";
+    OffloadingPrefix += BoundArch;
+  }
+
   SmallString<128> Path;
   if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
     Path = A->getValue();
     if (llvm::sys::fs::is_directory(Path)) {
-      SmallString<128> Tmp(Result.getFilename());
-      llvm::sys::path::replace_extension(Tmp, "json");
-      llvm::sys::path::append(Path, llvm::sys::path::filename(Tmp));
+      // When -ftime-trace=<dir> and it's a directory:
+      // - For host/non-offload: use the output filename stem
+      // - For offload: use input filename stem + offloading prefix
+      SmallString<128> Tmp;
+      if (OffloadingPrefix.empty()) {
+        Tmp = llvm::sys::path::stem(Result.getFilename());
+      } else {
+        Tmp = llvm::sys::path::stem(BaseInput);
+        Tmp += OffloadingPrefix;
+      }
+      Tmp += ".json";
+      llvm::sys::path::append(Path, Tmp);
     }
   } else {
     if (Arg *DumpDir = Args.getLastArgNoClaim(options::OPT_dumpdir)) {
-      // The trace file is ${dumpdir}${basename}.json. Note that dumpdir may not
-      // end with a path separator.
+      // The trace file is ${dumpdir}${basename}${offloadprefix}.json. Note
+      // that dumpdir may not end with a path separator.
       Path = DumpDir->getValue();
-      Path += llvm::sys::path::filename(BaseInput);
+      Path += llvm::sys::path::stem(BaseInput);
+      Path += OffloadingPrefix;
+    } else if (!OffloadingPrefix.empty()) {
+      // For offloading, derive path from -o option or use current directory.
+      // The Result filename may be a temp file, so we use the -o output
+      // directory combined with the input filename and offload prefix.
+      if (Arg *FinalOutput = Args.getLastArg(options::OPT_o)) {
+        Path = llvm::sys::path::parent_path(FinalOutput->getValue());
+        if (!Path.empty())
+          Path += llvm::sys::path::get_separator();
+      }
+      Path += llvm::sys::path::stem(BaseInput);
+      Path += OffloadingPrefix;
     } else {
-      Path = Result.getFilename();
+      // Use the output filename stem for the trace file.
+      Path = llvm::sys::path::parent_path(Result.getFilename());
+      if (!Path.empty())
+        Path += llvm::sys::path::get_separator();
+      Path += llvm::sys::path::stem(Result.getFilename());
     }
     llvm::sys::path::replace_extension(Path, "json");
   }
@@ -6126,8 +6169,9 @@ InputInfoList Driver::BuildJobsForActionNoCache(
                                              AtTopLevel, MultipleArchs,
                                              OffloadingPrefix),
                        BaseInput);
-    if (T->canEmitIR() && OffloadingPrefix.empty())
-      handleTimeTrace(C, Args, JA, BaseInput, Result);
+    if (T->canEmitIR())
+      handleTimeTrace(C, Args, JA, BaseInput, Result, TC, BoundArch,
+                      AtTopLevel);
   }
 
   if (CCCPrintBindings && !CCGenDiagnostics) {
