@@ -75,7 +75,10 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
+    // TODO: Add tests for uncountable-with-side-effects.
+    VPlanTransforms::handleEarlyExits(
+        *Plan, HasUncountableExit,
+        /*HasUncountableExitWithSideEffects=*/false);
     VPlanTransforms::addMiddleCheck(*Plan, true, false);
 
     VPlanTransforms::createLoopRegions(*Plan);
