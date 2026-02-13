@@ -464,7 +464,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Form SSA out of local memory accesses after breaking apart aggregates into
   // scalars.
-  FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+  FPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/false}));
 
   // Catch trivial redundancies
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
@@ -552,7 +552,7 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
                                               /*UseMemorySSA=*/false));
 
   // Delete small array after loop unroll.
-  FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+  FPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/false}));
 
   // Specially optimize memory movement as it doesn't look like dataflow in SSA.
   FPM.addPass(MemCpyOptPass());
@@ -605,7 +605,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Form SSA out of local memory accesses after breaking apart aggregates into
   // scalars.
-  FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+  FPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/false}));
 
   // Catch trivial redundancies
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
@@ -742,7 +742,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                                               /*UseMemorySSA=*/false));
 
   // Delete small array after loop unroll.
-  FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+  FPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/false}));
 
   // Try vectorization/scalarization transforms that are both improvements
   // themselves and can allow further folds with GVN and InstCombine.
@@ -835,7 +835,7 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
   CGSCCPassManager &CGPipeline = MIWP.getPM();
 
   FunctionPassManager FPM;
-  FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+  FPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/false}));
   FPM.addPass(EarlyCSEPass()); // Catch trivial redundancies.
   FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
       true)));                    // Merge & remove basic blocks.
@@ -1146,7 +1146,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
     // SimplifyCFG.
     EarlyFPM.addPass(LowerExpectIntrinsicPass());
     EarlyFPM.addPass(SimplifyCFGPass());
-    EarlyFPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+    EarlyFPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/false}));
     EarlyFPM.addPass(EarlyCSEPass());
     if (Level == OptimizationLevel::O3)
       EarlyFPM.addPass(CallSiteSplittingPass());
@@ -1360,7 +1360,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // NOTE: we are very late in the pipeline, and we don't have any LICM
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
-    FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+    FPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/true}));
   }
 
   if (!IsFullLTO) {
@@ -1452,7 +1452,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // NOTE: we are very late in the pipeline, and we don't have any LICM
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
-    FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+    FPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/true}));
   }
 
   FPM.addPass(InferAlignmentPass());
@@ -2028,8 +2028,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     CGSCCPassManager CGPM;
     CGPM.addPass(PostOrderFunctionAttrsPass());
     CGPM.addPass(ArgumentPromotionPass());
-    CGPM.addPass(
-        createCGSCCToFunctionPassAdaptor(SROAPass(SROAOptions::ModifyCFG)));
+    CGPM.addPass(createCGSCCToFunctionPassAdaptor(
+        SROAPass(SROAPassOptions{/*PreserveCFG=*/false})));
     MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
 
     // Propagate constants at call sites into the functions they call.  This
@@ -2180,7 +2180,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   }
 
   // Break up allocas
-  FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
+  FPM.addPass(SROAPass(SROAPassOptions{/*PreserveCFG=*/false}));
 
   // LTO provides additional opportunities for tailcall elimination due to
   // link-time inlining, and visibility of nocapture attribute.

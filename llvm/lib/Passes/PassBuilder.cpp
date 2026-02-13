@@ -1393,17 +1393,35 @@ Expected<ScalarizerPassOptions> parseScalarizerOptions(StringRef Params) {
   return Result;
 }
 
-Expected<SROAOptions> parseSROAOptions(StringRef Params) {
-  if (Params.empty() || Params == "modify-cfg")
-    return SROAOptions::ModifyCFG;
-  if (Params == "preserve-cfg")
-    return SROAOptions::PreserveCFG;
-  return make_error<StringError>(
-      formatv("invalid SROA pass parameter '{}' (either preserve-cfg or "
-              "modify-cfg can be specified)",
-              Params)
-          .str(),
-      inconvertibleErrorCode());
+Expected<SROAPassOptions> parseSROAOptions(StringRef Params) {
+  SROAPassOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "modify-cfg") {
+      Result.PreserveCFG = false;
+    } else if (ParamName == "preserve-cfg") {
+      Result.PreserveCFG = true;
+    } else if (ParamName.consume_front("max-struct-to-vector=")) {
+      unsigned Value;
+      if (ParamName.getAsInteger(0, Value))
+        return make_error<StringError>(
+            formatv("invalid SROA pass parameter '{}' (expected integer)",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+      Result.MaxStructToVectorSize = Value;
+    } else {
+      return make_error<StringError>(
+          formatv("invalid SROA pass parameter '{}' (valid params: "
+                  "preserve-cfg, modify-cfg, max-struct-to-vector=N)",
+                  ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return Result;
 }
 
 Expected<StackLifetime::LivenessType>

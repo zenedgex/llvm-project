@@ -708,8 +708,8 @@ FUNCTION_PASS_WITH_PARAMS(
     parseSpeculativeExecutionPassOptions, "only-if-divergent-target")
 FUNCTION_PASS_WITH_PARAMS(
     "sroa", "SROAPass",
-    [](SROAOptions PreserveCFG) { return SROAPass(PreserveCFG); },
-    parseSROAOptions, "preserve-cfg;modify-cfg")
+    [](SROAPassOptions Options) { return SROAPass(Options); }, parseSROAOptions,
+    "preserve-cfg;modify-cfg;max-struct-to-vector=N")
 FUNCTION_PASS_WITH_PARAMS(
     "structurizecfg", "StructurizeCFG",
     [](bool SkipUniformRegions) {

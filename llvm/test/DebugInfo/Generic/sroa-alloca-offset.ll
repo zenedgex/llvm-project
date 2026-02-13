@@ -1,5 +1,5 @@
-; RUN: opt %s -passes=sroa -S | FileCheck %s --check-prefixes=COMMON,OLD
-; RUN: opt %s -passes=declare-to-assign,sroa -S | FileCheck %s --check-prefixes=COMMON,NEW
+; RUN: opt %s -passes='sroa<max-struct-to-vector=0>' -S | FileCheck %s --check-prefixes=COMMON,OLD
+; RUN: opt %s -passes='declare-to-assign,sroa<max-struct-to-vector=0>' -S | FileCheck %s --check-prefixes=COMMON,NEW
 
 ;; C++17 source:
 ;; struct two { int a, b; } gt;
