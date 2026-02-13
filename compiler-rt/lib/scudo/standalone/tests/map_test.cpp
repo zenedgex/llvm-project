@@ -75,6 +75,27 @@ TEST(ScudoMapDeathTest, MapWithGuardUnmap) {
   MemMap.unmap();
 }
 
+TEST(ScudoMapDeathTest, ResidentPagesNotMapped) {
+  scudo::MemMapT MemMap;
+  EXPECT_DEATH(MemMap.getResidentPages(), "");
+}
+
+TEST(ScudoMapDeathTest, ResidentPagesFromInvalid) {
+  scudo::MemMapT MemMap;
+  const scudo::uptr Size = 4 * scudo::getPageSizeCached();
+  MemMap.map(/*Addr=*/0U, Size, MappingName);
+  EXPECT_DEATH(MemMap.getResidentPages(0U, Size), "");
+  MemMap.unmap();
+}
+
+TEST(ScudoMapDeathTest, ResidentPagesSizeInvalid) {
+  scudo::MemMapT MemMap;
+  const scudo::uptr Size = 4 * scudo::getPageSizeCached();
+  MemMap.map(/*Addr=*/0U, Size, MappingName);
+  EXPECT_DEATH(MemMap.getResidentPages(MemMap.getBase(), Size + 1), "");
+  MemMap.unmap();
+}
+
 TEST(ScudoMapTest, MapGrowUnmap) {
   const scudo::uptr PageSize = scudo::getPageSizeCached();
   const scudo::uptr Size = 4 * PageSize;
