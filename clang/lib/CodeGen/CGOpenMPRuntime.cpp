@@ -6375,6 +6375,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
       [&CGF, &D, &CodeGen](StringRef EntryFnName) {
         const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
+
         CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
         CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
         return CGF.GenerateOpenMPCapturedStmtFunction(CS, D);
