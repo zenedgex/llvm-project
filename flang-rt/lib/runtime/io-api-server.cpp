@@ -212,7 +212,7 @@ rpc::Status HandleOpcodesImpl(rpc::Server::Port &port) {
 } // namespace
 
 RT_EXT_API_GROUP_BEGIN
-std::uint32_t IONAME(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes) {
+std::uint32_t IODEF(HandleRPCOpcodes)(void *raw, std::uint32_t numLanes) {
   rpc::Server::Port &Port = *reinterpret_cast<rpc::Server::Port *>(raw);
   if (numLanes == 1) {
     return HandleOpcodesImpl<1>(Port);
