@@ -7745,7 +7745,8 @@ TreeTransform<Derived>::TransformLateParsedAttrType(TypeLocBuilder &TLB,
         InnerTy, OldTy->getLateParsedAttribute());
   }
 
-  TLB.push<LateParsedAttrTypeLoc>(Result);
+  LateParsedAttrTypeLoc newTL = TLB.push<LateParsedAttrTypeLoc>(Result);
+  newTL.setAttrNameLoc(TL.getAttrNameLoc());
   return Result;
 }
 
