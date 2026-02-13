@@ -2510,7 +2510,8 @@ static bool interp__builtin_elementwise_fp_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
     llvm::function_ref<std::optional<APFloat>(
         const APFloat &, const APFloat &, std::optional<APSInt> RoundingMode)>
-        Fn) {
+        Fn,
+    bool IsScalar = false) {
   assert((Call->getNumArgs() == 2) || (Call->getNumArgs() == 3));
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   assert(VT->getElementType()->isFloatingType());
@@ -2533,6 +2534,10 @@ static bool interp__builtin_elementwise_fp_binop(
   const Pointer &Dst = S.Stk.peek<Pointer>();
   for (unsigned ElemIdx = 0; ElemIdx != NumElems; ++ElemIdx) {
     using T = PrimConv<PT_Float>::T;
+    if (IsScalar && ElemIdx > 0) {
+      Dst.elem<T>(ElemIdx) = APtr.elem<T>(ElemIdx);
+      continue;
+    }
     APFloat ElemA = APtr.elem<T>(ElemIdx).getAPFloat();
     APFloat ElemB = BPtr.elem<T>(ElemIdx).getAPFloat();
     std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
@@ -2540,6 +2545,43 @@ static bool interp__builtin_elementwise_fp_binop(
       return false;
     Dst.elem<T>(ElemIdx) = static_cast<T>(*Result);
   }
+
+  Dst.initializeAllElements();
+
+  return true;
+}
+
+static bool interp__builtin_scalar_fp_round_mask_binop(
+    InterpState &S, CodePtr OpPC, const CallExpr *Call,
+    llvm::function_ref<std::optional<APFloat>(const APFloat &, const APFloat &,
+                                              std::optional<APSInt>)>
+        Fn) {
+  assert(Call->getNumArgs() == 5);
+  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
+  unsigned NumElems = VT->getNumElements();
+
+  APSInt RoundingMode = popToAPSInt(S, Call->getArg(4));
+  uint64_t MaskVal = popToUInt64(S, Call->getArg(3));
+  const Pointer &SrcPtr = S.Stk.pop<Pointer>();
+  const Pointer &BPtr = S.Stk.pop<Pointer>();
+  const Pointer &APtr = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  using T = PrimConv<PT_Float>::T;
+
+  if (MaskVal & 1) {
+    APFloat ElemA = APtr.elem<T>(0).getAPFloat();
+    APFloat ElemB = BPtr.elem<T>(0).getAPFloat();
+    std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
+    if (!Result)
+      return false;
+    Dst.elem<T>(0) = static_cast<T>(*Result);
+  } else {
+    Dst.elem<T>(0) = SrcPtr.elem<T>(0);
+  }
+
+  for (unsigned I = 1; I < NumElems; ++I)
+    Dst.elem<T>(I) = APtr.elem<T>(I);
 
   Dst.initializeAllElements();
 
@@ -5859,6 +5901,54 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::minimum(A, B);
         });
 
+  case clang::X86::BI__builtin_ia32_minss:
+  case clang::X86::BI__builtin_ia32_minsd:
+  case clang::X86::BI__builtin_ia32_minsh:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
+            return std::nullopt;
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        },
+        /*IsScalar=*/true);
+
+  case clang::X86::BI__builtin_ia32_minsd_round_mask:
+  case clang::X86::BI__builtin_ia32_minss_round_mask:
+  case clang::X86::BI__builtin_ia32_minsh_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsd_round_mask:
+  case clang::X86::BI__builtin_ia32_maxss_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsh_round_mask: {
+    bool IsMin = BuiltinID == clang::X86::BI__builtin_ia32_minsd_round_mask ||
+                 BuiltinID == clang::X86::BI__builtin_ia32_minss_round_mask ||
+                 BuiltinID == clang::X86::BI__builtin_ia32_minsh_round_mask;
+    return interp__builtin_scalar_fp_round_mask_binop(
+        S, OpPC, Call,
+        [IsMin](const APFloat &A, const APFloat &B,
+                std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
+            return std::nullopt;
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return IsMin ? llvm::minimum(A, B) : llvm::maximum(A, B);
+        });
+  }
+
   case clang::X86::BI__builtin_ia32_maxps:
   case clang::X86::BI__builtin_ia32_maxpd:
   case clang::X86::BI__builtin_ia32_maxph128:
@@ -5879,6 +5969,27 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
             return B;
           return llvm::maximum(A, B);
         });
+
+  case clang::X86::BI__builtin_ia32_maxss:
+  case clang::X86::BI__builtin_ia32_maxsd:
+  case clang::X86::BI__builtin_ia32_maxsh:
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
+            return std::nullopt;
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        },
+        /*IsScalar=*/true);
 
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
