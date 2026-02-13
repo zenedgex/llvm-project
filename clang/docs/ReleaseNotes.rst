@@ -152,6 +152,10 @@ New Compiler Flags
   can only generate the reduced BMI as a by-product, e.g, an object files or
   a full BMI.
 
+- New ``-cc1`` option ``-fexperimental-overflow-behavior-types`` added to
+  enable parsing of the experimental ``overflow_behavior`` type attribute and
+  type specifiers.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -169,6 +173,11 @@ Attribute Changes in Clang
   the analysis which determines if a function should get a stack protector.  A function
   will still generate a stack protector if other local variables or command line flags
   require it.
+
+- Introduced a new type attribute ``__attribute__((overflow_behavior))`` which
+  currently accepts either ``wrap`` or ``trap`` as an argument, enabling
+  type-level control over overflow behavior. There is also an accompanying type
+  specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
 Improvements to Clang's diagnostics
 -----------------------------------
