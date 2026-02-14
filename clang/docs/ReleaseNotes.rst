@@ -276,6 +276,12 @@ Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a behavioral discrepancy between deleted functions and private members when checking the ``enable_if`` attribute. (#GH175895)
 
+Bug Fixes to C Support
+^^^^^^^^^^^^^^^^^^^^^^
+
+- No longer applying Named Return Value Optimization (NRVO) in C as it is a
+  non-conforming optimization in C. (#GH100902)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
