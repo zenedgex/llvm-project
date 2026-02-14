@@ -494,7 +494,7 @@ static void thinLTOInternalizeAndPromoteGUID(
         if (ExternallyVisibleSymbolNames && !NameRecorded) {
           NameRecorded = true;
           if (ExternallyVisibleSymbolNames->insert(VI.name()).second)
-            S->setRenameOnPromotion(false);
+            S->setNotRenameOnPromotion(true);
         }
 
         S->setLinkage(GlobalValue::ExternalLinkage);
