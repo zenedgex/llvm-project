@@ -89,9 +89,13 @@ INSTR_PROF_DATA(IntPtrT, llvm::PointerType::getUnqual(Ctx), Values, \
                 ValuesPtrExpr)
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
-INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
-                ConstantArray::get(Int16ArrayTy, Int16ArrayVals)) \
-INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
+INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last + 1],
+                ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
+INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx),
+                NumOffloadProfilingThreads,
+                ConstantInt::get(llvm::Type::getInt16Ty(Ctx),
+                                 NumOffloadProfilingThreadsVal))
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes,
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */

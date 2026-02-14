@@ -89,9 +89,13 @@ INSTR_PROF_DATA(IntPtrT, llvm::PointerType::getUnqual(Ctx), Values, \
                 ValuesPtrExpr)
 INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumCounters, \
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumCounters))
-INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
-                ConstantArray::get(Int16ArrayTy, Int16ArrayVals)) \
-INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes, \
+INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last + 1],
+                ConstantArray::get(Int16ArrayTy, Int16ArrayVals))
+INSTR_PROF_DATA(const uint16_t, llvm::Type::getInt16Ty(Ctx),
+                NumOffloadProfilingThreads,
+                ConstantInt::get(llvm::Type::getInt16Ty(Ctx),
+                                 NumOffloadProfilingThreadsVal))
+INSTR_PROF_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), NumBitmapBytes,
                 ConstantInt::get(llvm::Type::getInt32Ty(Ctx), NumBitmapBytes))
 #undef INSTR_PROF_DATA
 /* INSTR_PROF_DATA end. */
@@ -185,8 +189,11 @@ INSTR_PROF_RAW_HEADER(uint64_t, ValueKindLast, IPVK_Last)
 #endif
 VALUE_PROF_FUNC_PARAM(uint64_t, TargetValue, Type::getInt64Ty(Ctx)) \
                       INSTR_PROF_COMMA
-VALUE_PROF_FUNC_PARAM(void *, Data, PointerType::getUnqual(Ctx)) INSTR_PROF_COMMA
-VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
+                      VALUE_PROF_FUNC_PARAM(void *, Data,
+                                            PointerType::getUnqual(Ctx))
+                      INSTR_PROF_COMMA
+                          VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex,
+                                                Type::getInt32Ty(Ctx))
 #undef VALUE_PROF_FUNC_PARAM
 #undef INSTR_PROF_COMMA
 /* VALUE_PROF_FUNC_PARAM end */
@@ -197,38 +204,53 @@ VALUE_PROF_FUNC_PARAM(uint32_t, CounterIndex, Type::getInt32Ty(Ctx))
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
-/* For indirect function call value profiling, the addresses of the target
- * functions are profiled by the instrumented code. The target addresses are
- * written in the raw profile data and converted to target function name's MD5
- * hash by the profile reader during deserialization.  Typically, this happens
- * when the raw profile data is read during profile merging.
- *
- * For this remapping the ProfData is used.  ProfData contains both the function
- * name hash and the function address.
- */
-VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0, "indirect call target")
-/* For memory intrinsic functions size profiling. */
-VALUE_PROF_KIND(IPVK_MemOPSize, 1, "memory intrinsic functions size")
-/* For virtual table address profiling, the address point of the virtual table
- * (i.e., the address contained in objects pointing to a virtual table) are
- * profiled. Note this may not be the address of the per C++ class virtual table
- *  object (e.g., there might be an offset).
- *
- * The profiled addresses are stored in raw profile, together with the following
- * two types of information.
- * 1. The (starting and ending) addresses of per C++ class virtual table objects.
- * 2. The (compressed) virtual table object names.
- * RawInstrProfReader converts profiled virtual table addresses to virtual table
- *  objects' MD5 hash.
- */
-VALUE_PROF_KIND(IPVK_VTableTarget, 2, "The profiled address point of the vtable")
-/* These two kinds must be the last to be
- * declared. This is to make sure the string
- * array created with the template can be
- * indexed with the kind value.
- */
-VALUE_PROF_KIND(IPVK_First, IPVK_IndirectCallTarget, "first")
-VALUE_PROF_KIND(IPVK_Last, IPVK_VTableTarget, "last")
+                          /* For indirect function call value profiling, the
+                           * addresses of the target functions are profiled by
+                           * the instrumented code. The target addresses are
+                           * written in the raw profile data and converted to
+                           * target function name's MD5 hash by the profile
+                           * reader during deserialization.  Typically, this
+                           * happens when the raw profile data is read during
+                           * profile merging.
+                           *
+                           * For this remapping the ProfData is used.  ProfData
+                           * contains both the function name hash and the
+                           * function address.
+                           */
+                          VALUE_PROF_KIND(IPVK_IndirectCallTarget, 0,
+                                          "indirect call target")
+                          /* For memory intrinsic functions size profiling. */
+                          VALUE_PROF_KIND(IPVK_MemOPSize, 1,
+                                          "memory intrinsic functions size")
+                          /* For virtual table address profiling, the address
+                           * point of the virtual table (i.e., the address
+                           * contained in objects pointing to a virtual table)
+                           * are profiled. Note this may not be the address of
+                           * the per C++ class virtual table object (e.g., there
+                           * might be an offset).
+                           *
+                           * The profiled addresses are stored in raw profile,
+                           * together with the following two types of
+                           * information.
+                           * 1. The (starting and ending) addresses of per C++
+                           * class virtual table objects.
+                           * 2. The (compressed) virtual table object names.
+                           * RawInstrProfReader converts profiled virtual table
+                           * addresses to virtual table objects' MD5 hash.
+                           */
+                          VALUE_PROF_KIND(
+                              IPVK_VTableTarget, 2,
+                              "The profiled address point of the vtable")
+                          /* These two kinds must be the last to be
+                           * declared. This is to make sure the string
+                           * array created with the template can be
+                           * indexed with the kind value.
+                           */
+                          VALUE_PROF_KIND(
+                              IPVK_First, IPVK_IndirectCallTarget,
+                              "first") VALUE_PROF_KIND(IPVK_Last,
+                                                       IPVK_VTableTarget,
+                                                       "last")
 
 #undef VALUE_PROF_KIND
 /* VALUE_PROF_KIND end */
@@ -251,35 +273,70 @@ VALUE_PROF_KIND(IPVK_Last, IPVK_VTableTarget, "last")
 #define INSTR_PROF_DATA_DEFINED
 #endif
 #ifdef COVMAP_V1
-COVMAP_FUNC_RECORD(const IntPtrT, llvm::PointerType::getUnqual(Ctx), \
-                   NamePtr, llvm::ConstantExpr::getBitCast(NamePtr, \
-                   llvm::PointerType::getUnqual(Ctx)))
-COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), NameSize, \
-                   llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), \
-                   NameValue.size()))
+                              COVMAP_FUNC_RECORD(
+                                  const IntPtrT,
+                                  llvm::PointerType::getUnqual(Ctx), NamePtr,
+                                  llvm::ConstantExpr::getBitCast(
+                                      NamePtr,
+                                      llvm::PointerType::getUnqual(
+                                          Ctx))) COVMAP_FUNC_RECORD(const uint32_t,
+                                                                    llvm::Type::
+                                                                        getInt32Ty(
+                                                                            Ctx),
+                                                                    NameSize,
+                                                                    llvm::ConstantInt::get(
+                                                                        llvm::Type::
+                                                                            getInt32Ty(
+                                                                                Ctx),
+                                                                        NameValue
+                                                                            .size()))
 #endif
 #ifdef COVMAP_V2_OR_V3
-COVMAP_FUNC_RECORD(const int64_t, llvm::Type::getInt64Ty(Ctx), NameRef, \
-                   llvm::ConstantInt::get( \
-                     llvm::Type::getInt64Ty(Ctx), NameHash))
+                                  COVMAP_FUNC_RECORD(
+                                      const int64_t,
+                                      llvm::Type::getInt64Ty(Ctx), NameRef,
+                                      llvm::ConstantInt::get(
+                                          llvm::Type::getInt64Ty(Ctx),
+                                          NameHash))
 #endif
-COVMAP_FUNC_RECORD(const uint32_t, llvm::Type::getInt32Ty(Ctx), DataSize, \
-                   llvm::ConstantInt::get( \
-                     llvm::Type::getInt32Ty(Ctx), CoverageMapping.size()))
-COVMAP_FUNC_RECORD(const uint64_t, llvm::Type::getInt64Ty(Ctx), FuncHash, \
-                   llvm::ConstantInt::get( \
-                     llvm::Type::getInt64Ty(Ctx), FuncHash))
+                                      COVMAP_FUNC_RECORD(
+                                          const uint32_t,
+                                          llvm::Type::getInt32Ty(Ctx), DataSize,
+                                          llvm::ConstantInt::get(
+                                              llvm::Type::getInt32Ty(Ctx),
+                                              CoverageMapping.size()))
+                                          COVMAP_FUNC_RECORD(
+                                              const uint64_t,
+                                              llvm::Type::getInt64Ty(Ctx),
+                                              FuncHash,
+                                              llvm::ConstantInt::get(
+                                                  llvm::Type::getInt64Ty(Ctx),
+                                                  FuncHash))
 #ifdef COVMAP_V3
-COVMAP_FUNC_RECORD(const uint64_t, llvm::Type::getInt64Ty(Ctx), FilenamesRef, \
-                   llvm::ConstantInt::get( \
-                     llvm::Type::getInt64Ty(Ctx), FilenamesRef))
-COVMAP_FUNC_RECORD(const char, \
-                   llvm::ArrayType::get(llvm::Type::getInt8Ty(Ctx), \
-                                        CoverageMapping.size()), \
-                   CoverageMapping,
-                   llvm::ConstantDataArray::getRaw( \
-                     CoverageMapping, CoverageMapping.size(), \
-                     llvm::Type::getInt8Ty(Ctx)))
+                                              COVMAP_FUNC_RECORD(
+                                                  const uint64_t,
+                                                  llvm::Type::getInt64Ty(Ctx),
+                                                  FilenamesRef,
+                                                  llvm::ConstantInt::get(
+                                                      llvm::Type::getInt64Ty(
+                                                          Ctx),
+                                                      FilenamesRef))
+                                                  COVMAP_FUNC_RECORD(
+                                                      const char,
+                                                      llvm::ArrayType::get(
+                                                          llvm::Type::getInt8Ty(
+                                                              Ctx),
+                                                          CoverageMapping
+                                                              .size()),
+                                                      CoverageMapping,
+                                                      llvm::ConstantDataArray::
+                                                          getRaw(
+                                                              CoverageMapping,
+                                                              CoverageMapping
+                                                                  .size(),
+                                                              llvm::Type::
+                                                                  getInt8Ty(
+                                                                      Ctx)))
 #endif
 #undef COVMAP_FUNC_RECORD
 /* COVMAP_FUNC_RECORD end.  */
@@ -292,14 +349,31 @@ COVMAP_FUNC_RECORD(const char, \
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
-COVMAP_HEADER(uint32_t, Int32Ty, NRecords, \
-              llvm::ConstantInt::get(Int32Ty, NRecords))
-COVMAP_HEADER(uint32_t, Int32Ty, FilenamesSize, \
-              llvm::ConstantInt::get(Int32Ty, FilenamesSize))
-COVMAP_HEADER(uint32_t, Int32Ty, CoverageSize, \
-              llvm::ConstantInt::get(Int32Ty, CoverageMappingSize))
-COVMAP_HEADER(uint32_t, Int32Ty, Version, \
-              llvm::ConstantInt::get(Int32Ty, CovMapVersion::CurrentVersion))
+                                                      COVMAP_HEADER(
+                                                          uint32_t, Int32Ty,
+                                                          NRecords,
+                                                          llvm::ConstantInt::get(
+                                                              Int32Ty,
+                                                              NRecords)) COVMAP_HEADER(uint32_t,
+                                                                                       Int32Ty,
+                                                                                       FilenamesSize,
+                                                                                       llvm::ConstantInt::
+                                                                                           get(Int32Ty,
+                                                                                               FilenamesSize))
+                                                          COVMAP_HEADER(
+                                                              uint32_t, Int32Ty,
+                                                              CoverageSize,
+                                                              llvm::ConstantInt::get(
+                                                                  Int32Ty,
+                                                                  CoverageMappingSize))
+                                                              COVMAP_HEADER(
+                                                                  uint32_t,
+                                                                  Int32Ty,
+                                                                  Version,
+                                                                  llvm::ConstantInt::get(
+                                                                      Int32Ty,
+                                                                      CovMapVersion::
+                                                                          CurrentVersion))
 #undef COVMAP_HEADER
 /* COVMAP_HEADER end.  */
 
@@ -309,54 +383,67 @@ COVMAP_HEADER(uint32_t, Int32Ty, Version, \
 #else
 #define INSTR_PROF_DATA_DEFINED
 #endif
-COVINIT_FUNC(IntPtrT, llvm::PointerType::getUnqual(Ctx), WriteoutFunction, \
-             WriteoutF)
-COVINIT_FUNC(IntPtrT, llvm::PointerType::getUnqual(Ctx), ResetFunction, \
-             ResetF)
+                                                                  COVINIT_FUNC(
+                                                                      IntPtrT,
+                                                                      llvm::PointerType::
+                                                                          getUnqual(Ctx),
+                                                                      WriteoutFunction,
+                                                                      WriteoutF)
+                                                                      COVINIT_FUNC(
+                                                                          IntPtrT,
+                                                                          llvm::PointerType::getUnqual(
+                                                                              Ctx),
+                                                                          ResetFunction,
+                                                                          ResetF)
 #undef COVINIT_FUNC
 /* COVINIT_FUNC end */
 
 #ifdef INSTR_PROF_SECT_ENTRY
 #define INSTR_PROF_DATA_DEFINED
-INSTR_PROF_SECT_ENTRY(IPSK_data, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON), \
-                      INSTR_PROF_DATA_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_cnts, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), \
-                      INSTR_PROF_CNTS_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_bitmap, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON), \
-                      INSTR_PROF_BITS_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_name, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON), \
-                      INSTR_PROF_NAME_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_vname, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_VNAME_COMMON), \
-                      INSTR_PROF_VNAME_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_vals, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_VALS_COMMON), \
-                      INSTR_PROF_VALS_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_vnodes, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON), \
-                      INSTR_PROF_VNODES_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_vtab, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_VTAB_COMMON), \
-                      INSTR_PROF_VTAB_COFF, "__DATA,")
-INSTR_PROF_SECT_ENTRY(IPSK_covmap, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_COVMAP_COMMON), \
-                      INSTR_PROF_COVMAP_COFF, "__LLVM_COV,")
-INSTR_PROF_SECT_ENTRY(IPSK_covfun, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_COVFUN_COMMON), \
-                      INSTR_PROF_COVFUN_COFF, "__LLVM_COV,")
-INSTR_PROF_SECT_ENTRY(IPSK_covdata, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_COVDATA_COMMON), \
-                      INSTR_PROF_COVDATA_COFF, "__LLVM_COV,")
-INSTR_PROF_SECT_ENTRY(IPSK_covname, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_COVNAME_COMMON), \
-                      INSTR_PROF_COVNAME_COFF, "__LLVM_COV,")
-INSTR_PROF_SECT_ENTRY(IPSK_covinit, \
-                      INSTR_PROF_QUOTE(INSTR_PROF_COVINIT_COMMON), \
-                      INSTR_PROF_COVINIT_COFF, "__LLVM_COV,")
+                                                                          INSTR_PROF_SECT_ENTRY(IPSK_data, INSTR_PROF_QUOTE(INSTR_PROF_DATA_COMMON), INSTR_PROF_DATA_COFF, "__DATA,") INSTR_PROF_SECT_ENTRY(IPSK_cnts, INSTR_PROF_QUOTE(INSTR_PROF_CNTS_COMMON), INSTR_PROF_CNTS_COFF, "__DATA,") INSTR_PROF_SECT_ENTRY(IPSK_ucnts,
+                                                                                                                                                                                                                                                                                                                        INSTR_PROF_QUOTE(
+                                                                                                                                                                                                                                                                                                                            INSTR_PROF_UCNTS_COMMON),
+                                                                                                                                                                                                                                                                                                                        INSTR_PROF_UCNTS_COFF, "__DATA,") INSTR_PROF_SECT_ENTRY(IPSK_bitmap,
+                                                                                                                                                                                                                                                                                                                                                                                INSTR_PROF_QUOTE(INSTR_PROF_BITS_COMMON), INSTR_PROF_BITS_COFF, "__DATA,") INSTR_PROF_SECT_ENTRY(IPSK_name,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 INSTR_PROF_QUOTE(INSTR_PROF_NAME_COMMON), INSTR_PROF_NAME_COFF,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 "__DATA,") INSTR_PROF_SECT_ENTRY(IPSK_vname,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  INSTR_PROF_QUOTE(
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      INSTR_PROF_VNAME_COMMON),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  INSTR_PROF_VNAME_COFF,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  "__DATA,") INSTR_PROF_SECT_ENTRY(IPSK_vals, INSTR_PROF_QUOTE(INSTR_PROF_VALS_COMMON),
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   INSTR_PROF_VALS_COFF,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   "__DATA,") INSTR_PROF_SECT_ENTRY(IPSK_vnodes, INSTR_PROF_QUOTE(INSTR_PROF_VNODES_COMMON), INSTR_PROF_VNODES_COFF,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    "__DATA,")
+                                                                              INSTR_PROF_SECT_ENTRY(IPSK_vtab, INSTR_PROF_QUOTE(INSTR_PROF_VTAB_COMMON), INSTR_PROF_VTAB_COFF, "__DATA,") INSTR_PROF_SECT_ENTRY(
+                                                                                  IPSK_covmap,
+                                                                                  INSTR_PROF_QUOTE(
+                                                                                      INSTR_PROF_COVMAP_COMMON),
+                                                                                  INSTR_PROF_COVMAP_COFF,
+                                                                                  "__LLVM_COV,")
+                                                                                  INSTR_PROF_SECT_ENTRY(
+                                                                                      IPSK_covfun,
+                                                                                      INSTR_PROF_QUOTE(
+                                                                                          INSTR_PROF_COVFUN_COMMON),
+                                                                                      INSTR_PROF_COVFUN_COFF,
+                                                                                      "__LLVM_COV,")
+                                                                                      INSTR_PROF_SECT_ENTRY(
+                                                                                          IPSK_covdata,
+                                                                                          INSTR_PROF_QUOTE(
+                                                                                              INSTR_PROF_COVDATA_COMMON),
+                                                                                          INSTR_PROF_COVDATA_COFF,
+                                                                                          "__LLVM_COV,")
+                                                                                          INSTR_PROF_SECT_ENTRY(
+                                                                                              IPSK_covname,
+                                                                                              INSTR_PROF_QUOTE(
+                                                                                                  INSTR_PROF_COVNAME_COMMON),
+                                                                                              INSTR_PROF_COVNAME_COFF,
+                                                                                              "__LLVM_COV,")
+                                                                                              INSTR_PROF_SECT_ENTRY(
+                                                                                                  IPSK_covinit,
+                                                                                                  INSTR_PROF_QUOTE(
+                                                                                                      INSTR_PROF_COVINIT_COMMON),
+                                                                                                  INSTR_PROF_COVINIT_COFF,
+                                                                                                  "__LLVM_COV,")
 
 #undef INSTR_PROF_SECT_ENTRY
 #endif
@@ -366,11 +453,12 @@ INSTR_PROF_SECT_ENTRY(IPSK_covinit, \
 #define INSTR_PROF_DATA_DEFINED
 
 #define INSTR_PROF_MAX_NUM_VAL_PER_SITE 255
-/*!
- * This is the header of the data structure that defines the on-disk
- * layout of the value profile data of a particular kind for one function.
- */
-typedef struct ValueProfRecord {
+                          /*!
+                           * This is the header of the data structure that
+                           * defines the on-disk layout of the value profile
+                           * data of a particular kind for one function.
+                           */
+                          typedef struct ValueProfRecord {
   /* The kind of the value profile record. */
   uint32_t Kind;
   /*
@@ -414,7 +502,7 @@ typedef struct ValueProfRecord {
    */
   LLVM_ABI void swapBytes(llvm::endianness Old, llvm::endianness New);
 #endif
-} ValueProfRecord;
+                      } ValueProfRecord;
 
 /*!
  * Per-function header/control data structure for value profiling
@@ -722,7 +810,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Raw profile format version (start from 1). */
 #define INSTR_PROF_RAW_VERSION 10
 /* Indexed profile format version (start from 1). */
-#define INSTR_PROF_INDEX_VERSION 13
+#define INSTR_PROF_INDEX_VERSION 14
 /* Coverage mapping format version (start from 0). */
 #define INSTR_PROF_COVMAP_VERSION 6
 
@@ -767,6 +855,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_NAME_COMMON __llvm_prf_names
 #define INSTR_PROF_VNAME_COMMON __llvm_prf_vns
 #define INSTR_PROF_CNTS_COMMON __llvm_prf_cnts
+#define INSTR_PROF_UCNTS_COMMON __llvm_prf_ucnts
 #define INSTR_PROF_BITS_COMMON __llvm_prf_bits
 #define INSTR_PROF_VALS_COMMON __llvm_prf_vals
 #define INSTR_PROF_VNODES_COMMON __llvm_prf_vnds
@@ -784,6 +873,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define INSTR_PROF_NAME_COFF ".lprfn$M"
 #define INSTR_PROF_VNAME_COFF ".lprfvn$M"
 #define INSTR_PROF_CNTS_COFF ".lprfc$M"
+#define INSTR_PROF_UCNTS_COFF ".lprfuc$M"
 #define INSTR_PROF_BITS_COFF ".lprfb$M"
 #define INSTR_PROF_VALS_COFF ".lprfv$M"
 #define INSTR_PROF_VNODES_COFF ".lprfnd$M"
