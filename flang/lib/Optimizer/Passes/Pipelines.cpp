@@ -347,7 +347,7 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
-  pm.addPass(flangomp::createMarkDeclareTargetPass());
+  pm.addPass(mlir::omp::createMarkDeclareTargetPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
   if (opts.isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
