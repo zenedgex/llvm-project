@@ -37,12 +37,12 @@ Sections:
 # RUN:   FileCheck %s -DFILE=%t2 --check-prefix=GNU2
 # RUN: llvm-readelf --file-headers --section-details %t2 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t2 --check-prefix=GNU2
+# GNU2:  warning: '[[FILE]]': invalid section index: 0
 # GNU2: Number of section headers:         0
 # GNU2: Section header string table index: 65535 (corrupt: out of range)
 
 # GNU2-EMPTY:
 # GNU2:       There are no sections in this file.
-# GNU2-NEXT:  warning: '[[FILE]]': e_shstrndx == SHN_XINDEX, but the section header table is empty
 
 # RUN: llvm-readobj --file-headers --sections %t2 | \
 # RUN:   FileCheck %s --check-prefix=LLVM2 --implicit-check-not="warning:"
