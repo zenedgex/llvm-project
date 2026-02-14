@@ -324,6 +324,7 @@ bool objdump::PrintImmHex;
 bool objdump::PrivateHeaders;
 std::vector<std::string> objdump::FilterSections;
 bool objdump::SectionHeaders;
+bool objdump::HadError;
 static bool ShowAllSymbols;
 static bool ShowLMA;
 bool objdump::PrintSource;
@@ -3971,5 +3972,5 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
 
   warnOnNoMatchForSections();
 
-  return EXIT_SUCCESS;
+  return HadError ? EXIT_FAILURE : EXIT_SUCCESS;
 }
