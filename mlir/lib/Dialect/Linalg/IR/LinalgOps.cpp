@@ -506,14 +506,13 @@ public:
     bool allBool = allInteger && arg0.getType().getIntOrFloatBitWidth() == 1 &&
                    arg1.getType().getIntOrFloatBitWidth() == 1;
     if (!allComplex && !allFloatingPoint && !allInteger) {
-      if (emitError) {
-        emitError()
-            << "Cannot build binary Linalg operation: expects allComplex, "
-               "allFloatingPoint, or allInteger, got "
-            << arg0.getType() << " and " << arg1.getType();
-        return nullptr;
-      }
-      llvm_unreachable("unsupported non numeric type");
+
+      auto diag = emitError ? emitError() : mlir::emitError(arg0.getLoc());
+      diag << "Cannot build binary Linalg operation: expects allComplex, "
+           << "allFloatingPoint, or allInteger, got " << arg0.getType()
+           << " and " << arg1.getType();
+
+      return arg0;
     }
     OpBuilder::InsertionGuard g(builder);
     builder.setInsertionPointToEnd(&block);
