@@ -1147,6 +1147,12 @@ private:
       SmallVector<const SCEV *, 2> Operands;
       if (ExprL == &OldL) {
         append_range(Operands, Expr->operands());
+        for (const SCEV *Op : Operands) {
+          if (!SE.isAvailableAtLoopEntry(Op, &NewL)) {
+            Valid = false;
+            return Expr;
+          }
+        }
         return SE.getAddRecExpr(Operands, &NewL, Expr->getNoWrapFlags());
       }
 
