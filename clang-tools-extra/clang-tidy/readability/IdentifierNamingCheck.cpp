@@ -238,9 +238,11 @@ static StringRef const HungarianNotationUserDefinedTypes[] = {
 
 IdentifierNamingCheck::NamingStyle::NamingStyle(
     std::optional<IdentifierNamingCheck::CaseType> Case, StringRef Prefix,
-    StringRef Suffix, StringRef IgnoredRegexpStr, HungarianPrefixType HPType)
+    StringRef Suffix, StringRef IgnoredRegexpStr, HungarianPrefixType HPType,
+    bool TrimPrefixSuffix)
     : Case(Case), Prefix(Prefix), Suffix(Suffix),
-      IgnoredRegexpStr(IgnoredRegexpStr), HPType(HPType) {
+      IgnoredRegexpStr(IgnoredRegexpStr), HPType(HPType),
+      TrimPrefixSuffix(TrimPrefixSuffix) {
   if (!IgnoredRegexpStr.empty()) {
     IgnoredRegexp =
         llvm::Regex(llvm::SmallString<128>({"^", IgnoredRegexpStr, "$"}));
@@ -259,7 +261,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
 
   SmallVector<std::optional<IdentifierNamingCheck::NamingStyle>, 0> Styles;
   Styles.resize(SK_Count);
-  SmallString<64> StyleString;
+  SmallString<128> StyleString;
   for (unsigned I = 0; I < SK_Count; ++I) {
     const size_t StyleSize = StyleNames[I].size();
     StyleString.assign({StyleNames[I], "HungarianPrefix"});
@@ -269,9 +271,12 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
     if (HPTOpt && !HungarianNotation.checkOptionValid(I))
       configurationDiag("invalid identifier naming option '%0'") << StyleString;
 
+    memcpy(&StyleString[StyleSize], "TrimPrefixSuffix", 16);
+    StyleString.truncate(StyleSize + 16);
+    const std::optional<bool> TrimPrefixSuffix = Options.get<bool>(StyleString);
     memcpy(&StyleString[StyleSize], "IgnoredRegexp", 13);
     StyleString.truncate(StyleSize + 13);
-    const std::optional<StringRef> IgnoredRegexpStr = Options.get(StyleString);
+    std::optional<StringRef> IgnoredRegexpStr = Options.get(StyleString);
     memcpy(&StyleString[StyleSize], "Prefix", 6);
     StyleString.truncate(StyleSize + 6);
     const std::optional<StringRef> Prefix(Options.get(StyleString));
@@ -286,7 +291,8 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
     if (CaseOptional || Prefix || Postfix || IgnoredRegexpStr || HPTOpt)
       Styles[I].emplace(std::move(CaseOptional), Prefix.value_or(""),
                         Postfix.value_or(""), IgnoredRegexpStr.value_or(""),
-                        HPTOpt.value_or(IdentifierNamingCheck::HPT_Off));
+                        HPTOpt.value_or(IdentifierNamingCheck::HPT_Off),
+                        TrimPrefixSuffix.value_or(false));
   }
   const bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
   const bool CheckAnonFieldInParent =
@@ -1084,9 +1090,31 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
   return Matcher.match(FDecl->getName());
 }
 
+static void trimPrefixesAndSuffixes(
+    StringRef &Mid,
+    ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles) {
+  bool LoopWhileToRemove = true;
+  while (LoopWhileToRemove) {
+    LoopWhileToRemove = false;
+    for (unsigned I = 0; I < SK_Count; ++I) {
+      if (const std::optional<IdentifierNamingCheck::NamingStyle> &OtherStyle =
+              NamingStyles[I]) {
+        while (!OtherStyle->Prefix.empty() &&
+               Mid.consume_front(OtherStyle->Prefix))
+          LoopWhileToRemove = true;
+
+        while (!OtherStyle->Suffix.empty() &&
+               Mid.consume_back(OtherStyle->Suffix))
+          LoopWhileToRemove = true;
+      }
+    }
+  }
+}
+
 std::string IdentifierNamingCheck::fixupWithStyle(
     StringRef Type, StringRef Name,
     const IdentifierNamingCheck::NamingStyle &Style,
+    ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
     const Decl *D) const {
   Name.consume_front(Style.Prefix);
@@ -1108,6 +1136,8 @@ std::string IdentifierNamingCheck::fixupWithStyle(
     }
   }
   StringRef Mid = StringRef(Fixed).trim("_");
+  if (Style.TrimPrefixSuffix)
+    trimPrefixesAndSuffixes(Mid, NamingStyles);
   if (Mid.empty())
     Mid = "_";
 
@@ -1359,7 +1389,8 @@ IdentifierNamingCheck::getFailureInfo(
                           IdentifierNamingCheck::CT_LowerCase);
   llvm::replace(KindName, '_', ' ');
 
-  std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
+  std::string Fixup =
+      fixupWithStyle(Type, Name, Style, NamingStyles, HNOption, ND);
   if (StringRef(Fixup) == Name) {
     if (!IgnoreFailedSplit) {
       LLVM_DEBUG(Location.print(llvm::dbgs(), SM);

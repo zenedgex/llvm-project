@@ -89,166 +89,211 @@ The available options are summarized below:
 **Specific options**
 
  - :option:`DefaultCase`, :option:`DefaultPrefix`,
-   :option:`DefaultSuffix`, :option:`DefaultIgnoredRegexp`,
-   :option:`DefaultHungarianPrefix`
+   :option:`DefaultSuffix`, :option:`DefaultTrimPrefixSuffix`,
+   :option:`DefaultIgnoredRegexp`, :option:`DefaultHungarianPrefix`
  - :option:`AbstractClassCase`, :option:`AbstractClassPrefix`,
-   :option:`AbstractClassSuffix`, :option:`AbstractClassIgnoredRegexp`,
-   :option:`AbstractClassHungarianPrefix`
+   :option:`AbstractClassSuffix`, :option:`AbstractClassTrimPrefixSuffix`,
+   :option:`AbstractClassIgnoredRegexp`, :option:`AbstractClassHungarianPrefix`
  - :option:`ClassCase`, :option:`ClassPrefix`, :option:`ClassSuffix`,
-   :option:`ClassIgnoredRegexp`, :option:`ClassHungarianPrefix`
+   :option:`ClassTrimPrefixSuffix`, :option:`ClassIgnoredRegexp`,
+   :option:`ClassHungarianPrefix`
  - :option:`ClassConstexprCase`, :option:`ClassConstexprPrefix`,
-   :option:`ClassConstexprSuffix`, :option:`ClassConstexprIgnoredRegexp`,
+   :option:`ClassConstexprSuffix`, :option:`ClassConstexprTrimPrefixSuffix`,
+   :option:`ClassConstexprIgnoredRegexp`,
    :option:`ClassConstexprHungarianPrefix`
  - :option:`ClassConstantCase`, :option:`ClassConstantPrefix`,
-   :option:`ClassConstantSuffix`, :option:`ClassConstantIgnoredRegexp`,
-   :option:`ClassConstantHungarianPrefix`
+   :option:`ClassConstantSuffix`, :option:`ClassConstantTrimPrefixSuffix`,
+   :option:`ClassConstantIgnoredRegexp`, :option:`ClassConstantHungarianPrefix`
  - :option:`ClassMemberCase`, :option:`ClassMemberPrefix`,
-   :option:`ClassMemberSuffix`, :option:`ClassMemberIgnoredRegexp`,
-   :option:`ClassMemberHungarianPrefix`
+   :option:`ClassMemberSuffix`, :option:`ClassMemberTrimPrefixSuffix`,
+   :option:`ClassMemberIgnoredRegexp`, :option:`ClassMemberHungarianPrefix`
  - :option:`ClassMethodCase`, :option:`ClassMethodPrefix`,
-   :option:`ClassMethodSuffix`, :option:`ClassMethodIgnoredRegexp`
+   :option:`ClassMethodSuffix`, :option:`ClassMethodTrimPrefixSuffix`,
+   :option:`ClassMethodIgnoredRegexp`
  - :option:`ConceptCase`, :option:`ConceptPrefix`, :option:`ConceptSuffix`,
-   :option:`ConceptIgnoredRegexp`
+   :option:`ConceptTrimPrefixSuffix`, :option:`ConceptIgnoredRegexp`
  - :option:`ConstantCase`, :option:`ConstantPrefix`, :option:`ConstantSuffix`,
-   :option:`ConstantIgnoredRegexp`, :option:`ConstantHungarianPrefix`
+   :option:`ConstantTrimPrefixSuffix`, :option:`ConstantIgnoredRegexp`,
+   :option:`ConstantHungarianPrefix`
  - :option:`ConstantMemberCase`, :option:`ConstantMemberPrefix`,
-   :option:`ConstantMemberSuffix`, :option:`ConstantMemberIgnoredRegexp`,
+   :option:`ConstantMemberSuffix`,
+   :option:`ConstantMemberTrimPrefixSuffix`,
+   :option:`ConstantMemberIgnoredRegexp`,
    :option:`ConstantMemberHungarianPrefix`
  - :option:`ConstantParameterCase`, :option:`ConstantParameterPrefix`,
-   :option:`ConstantParameterSuffix`, :option:`ConstantParameterIgnoredRegexp`,
+   :option:`ConstantParameterSuffix`,
+   :option:`ConstantParameterTrimPrefixSuffix`,
+   :option:`ConstantParameterIgnoredRegexp`,
    :option:`ConstantParameterHungarianPrefix`
  - :option:`ConstantPointerParameterCase`,
    :option:`ConstantPointerParameterPrefix`,
    :option:`ConstantPointerParameterSuffix`,
+   :option:`ConstantPointerParameterTrimPrefixSuffix`,
    :option:`ConstantPointerParameterIgnoredRegexp`,
    :option:`ConstantPointerParameterHungarianPrefix`
  - :option:`ConstexprFunctionCase`, :option:`ConstexprFunctionPrefix`,
-   :option:`ConstexprFunctionSuffix`, :option:`ConstexprFunctionIgnoredRegexp`
+   :option:`ConstexprFunctionSuffix`,
+   :option:`ConstexprFunctionTrimPrefixSuffix`,
+   :option:`ConstexprFunctionIgnoredRegexp`
  - :option:`ConstexprMethodCase`, :option:`ConstexprMethodPrefix`,
-   :option:`ConstexprMethodSuffix`, :option:`ConstexprMethodIgnoredRegexp`
+   :option:`ConstexprMethodSuffix`,
+   :option:`ConstexprMethodTrimPrefixSuffix`,
+   :option:`ConstexprMethodIgnoredRegexp`
  - :option:`ConstexprVariableCase`, :option:`ConstexprVariablePrefix`,
-   :option:`ConstexprVariableSuffix`, :option:`ConstexprVariableIgnoredRegexp`,
+   :option:`ConstexprVariableSuffix`,
+   :option:`ConstexprVariableTrimPrefixSuffix`,
+   :option:`ConstexprVariableIgnoredRegexp`,
    :option:`ConstexprVariableHungarianPrefix`
  - :option:`EnumCase`, :option:`EnumPrefix`, :option:`EnumSuffix`,
-   :option:`EnumIgnoredRegexp`
+   :option:`EnumTrimPrefixSuffix`, :option:`EnumIgnoredRegexp`
  - :option:`EnumConstantCase`, :option:`EnumConstantPrefix`,
-   :option:`EnumConstantSuffix`, :option:`EnumConstantIgnoredRegexp`,
-   :option:`EnumConstantHungarianPrefix`
+   :option:`EnumConstantSuffix`, :option:`EnumConstantTrimPrefixSuffix`,
+   :option:`EnumConstantIgnoredRegexp`, :option:`EnumConstantHungarianPrefix`
  - :option:`FunctionCase`, :option:`FunctionPrefix`, :option:`FunctionSuffix`,
-   :option:`FunctionIgnoredRegexp`
+   :option:`FunctionTrimPrefixSuffix`, :option:`FunctionIgnoredRegexp`
  - :option:`GlobalConstexprVariableCase`,
    :option:`GlobalConstexprVariablePrefix`,
    :option:`GlobalConstexprVariableSuffix`,
+   :option:`GlobalConstexprVariableTrimPrefixSuffix`,
    :option:`GlobalConstexprVariableIgnoredRegexp`,
    :option:`GlobalConstexprVariableHungarianPrefix`
  - :option:`GlobalConstantCase`, :option:`GlobalConstantPrefix`,
-   :option:`GlobalConstantSuffix`, :option:`GlobalConstantIgnoredRegexp`,
+   :option:`GlobalConstantSuffix`, :option:`GlobalConstantTrimPrefixSuffix`,
+   :option:`GlobalConstantIgnoredRegexp`,
    :option:`GlobalConstantHungarianPrefix`
  - :option:`GlobalConstantPointerCase`,
    :option:`GlobalConstantPointerPrefix`,
    :option:`GlobalConstantPointerSuffix`,
+   :option:`GlobalConstantPointerTrimPrefixSuffix`,
    :option:`GlobalConstantPointerIgnoredRegexp`,
    :option:`GlobalConstantPointerHungarianPrefix`
  - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`,
-   :option:`GlobalFunctionSuffix`, :option:`GlobalFunctionIgnoredRegexp`
+   :option:`GlobalFunctionSuffix`, :option:`GlobalFunctionTrimPrefixSuffix`,
+   :option:`GlobalFunctionIgnoredRegexp`
  - :option:`GlobalPointerCase`, :option:`GlobalPointerPrefix`,
-   :option:`GlobalPointerSuffix`, :option:`GlobalPointerIgnoredRegexp`,
-   :option:`GlobalPointerHungarianPrefix`
+   :option:`GlobalPointerSuffix`, :option:`GlobalPointerTrimPrefixSuffix`,
+   :option:`GlobalPointerIgnoredRegexp`, :option:`GlobalPointerHungarianPrefix`
  - :option:`GlobalVariableCase`, :option:`GlobalVariablePrefix`,
-   :option:`GlobalVariableSuffix`, :option:`GlobalVariableIgnoredRegexp`,
+   :option:`GlobalVariableSuffix`, :option:`GlobalVariableTrimPrefixSuffix`,
+   :option:`GlobalVariableIgnoredRegexp`,
    :option:`GlobalVariableHungarianPrefix`
  - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`,
-   :option:`InlineNamespaceSuffix`, :option:`InlineNamespaceIgnoredRegexp`
+   :option:`InlineNamespaceSuffix`, :option:`InlineNamespaceTrimPrefixSuffix`,
+   :option:`InlineNamespaceIgnoredRegexp`
  - :option:`LocalConstexprVariableCase`,
    :option:`LocalConstexprVariablePrefix`,
    :option:`LocalConstexprVariableSuffix`,
+   :option:`LocalConstexprVariableTrimPrefixSuffix`,
    :option:`LocalConstexprVariableIgnoredRegexp`,
    :option:`LocalConstexprVariableHungarianPrefix`
  - :option:`LocalConstantCase`, :option:`LocalConstantPrefix`,
-   :option:`LocalConstantSuffix`, :option:`LocalConstantIgnoredRegexp`,
-   :option:`LocalConstantHungarianPrefix`
+   :option:`LocalConstantSuffix`, :option:`LocalConstantTrimPrefixSuffix`,
+   :option:`LocalConstantIgnoredRegexp`, :option:`LocalConstantHungarianPrefix`
  - :option:`LocalConstantPointerCase`,
    :option:`LocalConstantPointerPrefix`,
    :option:`LocalConstantPointerSuffix`,
+   :option:`LocalConstantPointerTrimPrefixSuffix`,
    :option:`LocalConstantPointerIgnoredRegexp`,
    :option:`LocalConstantPointerHungarianPrefix`
  - :option:`LocalPointerCase`, :option:`LocalPointerPrefix`,
-   :option:`LocalPointerSuffix`, :option:`LocalPointerIgnoredRegexp`,
-   :option:`LocalPointerHungarianPrefix`
+   :option:`LocalPointerSuffix`, :option:`LocalPointerTrimPrefixSuffix`,
+   :option:`LocalPointerIgnoredRegexp`, :option:`LocalPointerHungarianPrefix`
  - :option:`LocalVariableCase`, :option:`LocalVariablePrefix`,
-   :option:`LocalVariableSuffix`, :option:`LocalVariableIgnoredRegexp`,
-   :option:`LocalVariableHungarianPrefix`
+   :option:`LocalVariableSuffix`, :option:`LocalVariableTrimPrefixSuffix`,
+   :option:`LocalVariableIgnoredRegexp`, :option:`LocalVariableHungarianPrefix`
  - :option:`MacroDefinitionCase`, :option:`MacroDefinitionPrefix`,
-   :option:`MacroDefinitionSuffix`, :option:`MacroDefinitionIgnoredRegexp`
+   :option:`MacroDefinitionSuffix`, :option:`MacroDefinitionTrimPrefixSuffix`,
+   :option:`MacroDefinitionIgnoredRegexp`
  - :option:`MemberCase`, :option:`MemberPrefix`, :option:`MemberSuffix`,
-   :option:`MemberIgnoredRegexp`, :option:`MemberHungarianPrefix`
+   :option:`MemberTrimPrefixSuffix`, :option:`MemberIgnoredRegexp`,
+   :option:`MemberHungarianPrefix`
  - :option:`MethodCase`, :option:`MethodPrefix`, :option:`MethodSuffix`,
-   :option:`MethodIgnoredRegexp`
+   :option:`MethodTrimPrefixSuffix`, :option:`MethodIgnoredRegexp`
  - :option:`NamespaceCase`, :option:`NamespacePrefix`,
-   :option:`NamespaceSuffix`, :option:`NamespaceIgnoredRegexp`
+   :option:`NamespaceSuffix`, :option:`NamespaceTrimPrefixSuffix`,
+   :option:`NamespaceIgnoredRegexp`
  - :option:`ParameterCase`, :option:`ParameterPrefix`,
-   :option:`ParameterSuffix`, :option:`ParameterIgnoredRegexp`,
-   :option:`ParameterHungarianPrefix`
+   :option:`ParameterSuffix`, :option:`ParameterTrimPrefixSuffix`,
+   :option:`ParameterIgnoredRegexp`, :option:`ParameterHungarianPrefix`
  - :option:`ParameterPackCase`, :option:`ParameterPackPrefix`,
-   :option:`ParameterPackSuffix`, :option:`ParameterPackIgnoredRegexp`
+   :option:`ParameterPackSuffix`, :option:`ParameterPackTrimPrefixSuffix`,
+   :option:`ParameterPackIgnoredRegexp`
  - :option:`PointerParameterCase`, :option:`PointerParameterPrefix`,
-   :option:`PointerParameterSuffix`, :option:`PointerParameterIgnoredRegexp`,
+   :option:`PointerParameterSuffix`,
+   :option:`PointerParameterTrimPrefixSuffix`,
+   :option:`PointerParameterIgnoredRegexp`,
    :option:`PointerParameterHungarianPrefix`
  - :option:`PrivateMemberCase`, :option:`PrivateMemberPrefix`,
-   :option:`PrivateMemberSuffix`, :option:`PrivateMemberIgnoredRegexp`,
-   :option:`PrivateMemberHungarianPrefix`
+   :option:`PrivateMemberSuffix`, :option:`PrivateMemberTrimPrefixSuffix`,
+   :option:`PrivateMemberIgnoredRegexp`, :option:`PrivateMemberHungarianPrefix`
  - :option:`PrivateMethodCase`, :option:`PrivateMethodPrefix`,
-   :option:`PrivateMethodSuffix`, :option:`PrivateMethodIgnoredRegexp`
+   :option:`PrivateMethodSuffix`, :option:`PrivateMethodTrimPrefixSuffix`,
+   :option:`PrivateMethodIgnoredRegexp`
  - :option:`ProtectedMemberCase`, :option:`ProtectedMemberPrefix`,
-   :option:`ProtectedMemberSuffix`, :option:`ProtectedMemberIgnoredRegexp`,
+   :option:`ProtectedMemberSuffix`, :option:`ProtectedMemberTrimPrefixSuffix`,
+   :option:`ProtectedMemberIgnoredRegexp`,
    :option:`ProtectedMemberHungarianPrefix`
  - :option:`ProtectedMethodCase`, :option:`ProtectedMethodPrefix`,
-   :option:`ProtectedMethodSuffix`, :option:`ProtectedMethodIgnoredRegexp`
+   :option:`ProtectedMethodSuffix`, :option:`ProtectedMethodTrimPrefixSuffix`,
+   :option:`ProtectedMethodIgnoredRegexp`
  - :option:`PublicMemberCase`, :option:`PublicMemberPrefix`,
-   :option:`PublicMemberSuffix`, :option:`PublicMemberIgnoredRegexp`,
-   :option:`PublicMemberHungarianPrefix`
+   :option:`PublicMemberSuffix`, :option:`PublicMemberTrimPrefixSuffix`,
+   :option:`PublicMemberIgnoredRegexp`, :option:`PublicMemberHungarianPrefix`
  - :option:`PublicMethodCase`, :option:`PublicMethodPrefix`,
-   :option:`PublicMethodSuffix`, :option:`PublicMethodIgnoredRegexp`
+   :option:`PublicMethodSuffix`, :option:`PublicMethodTrimPrefixSuffix`,
+   :option:`PublicMethodIgnoredRegexp`
  - :option:`ScopedEnumConstantCase`, :option:`ScopedEnumConstantPrefix`,
    :option:`ScopedEnumConstantSuffix`,
+   :option:`ScopedEnumConstantTrimPrefixSuffix`,
    :option:`ScopedEnumConstantIgnoredRegexp`
  - :option:`StaticConstexprVariableCase`,
    :option:`StaticConstexprVariablePrefix`,
    :option:`StaticConstexprVariableSuffix`,
+   :option:`StaticConstexprVariableTrimPrefixSuffix`,
    :option:`StaticConstexprVariableIgnoredRegexp`,
    :option:`StaticConstexprVariableHungarianPrefix`
  - :option:`StaticConstantCase`, :option:`StaticConstantPrefix`,
-   :option:`StaticConstantSuffix`, :option:`StaticConstantIgnoredRegexp`,
+   :option:`StaticConstantSuffix`, :option:`StaticConstantTrimPrefixSuffix`,
+   :option:`StaticConstantIgnoredRegexp`,
    :option:`StaticConstantHungarianPrefix`
  - :option:`StaticVariableCase`, :option:`StaticVariablePrefix`,
-   :option:`StaticVariableSuffix`, :option:`StaticVariableIgnoredRegexp`,
+   :option:`StaticVariableSuffix`, :option:`StaticVariableTrimPrefixSuffix`,
+   :option:`StaticVariableIgnoredRegexp`,
    :option:`StaticVariableHungarianPrefix`
  - :option:`StructCase`, :option:`StructPrefix`, :option:`StructSuffix`,
-   :option:`StructIgnoredRegexp`
+   :option:`StructTrimPrefixSuffix`, :option:`StructIgnoredRegexp`
  - :option:`TemplateParameterCase`, :option:`TemplateParameterPrefix`,
-   :option:`TemplateParameterSuffix`, :option:`TemplateParameterIgnoredRegexp`
+   :option:`TemplateParameterSuffix`,
+   :option:`TemplateParameterTrimPrefixSuffix`,
+   :option:`TemplateParameterIgnoredRegexp`
  - :option:`TemplateTemplateParameterCase`,
    :option:`TemplateTemplateParameterPrefix`,
    :option:`TemplateTemplateParameterSuffix`,
+   :option:`TemplateTemplateParameterTrimPrefixSuffix`,
    :option:`TemplateTemplateParameterIgnoredRegexp`
  - :option:`TypeAliasCase`, :option:`TypeAliasPrefix`,
-   :option:`TypeAliasSuffix`, :option:`TypeAliasIgnoredRegexp`
+   :option:`TypeAliasSuffix`, :option:`TypeAliasTrimPrefixSuffix`,
+   :option:`TypeAliasIgnoredRegexp`
  - :option:`TypedefCase`, :option:`TypedefPrefix`, :option:`TypedefSuffix`,
-   :option:`TypedefIgnoredRegexp`
+   :option:`TypedefTrimPrefixSuffix`, :option:`TypedefIgnoredRegexp`
  - :option:`TypeTemplateParameterCase`,
    :option:`TypeTemplateParameterPrefix`,
    :option:`TypeTemplateParameterSuffix`,
+   :option:`TypeTemplateParameterTrimPrefixSuffix`,
    :option:`TypeTemplateParameterIgnoredRegexp`
  - :option:`UnionCase`, :option:`UnionPrefix`, :option:`UnionSuffix`,
-   :option:`UnionIgnoredRegexp`
+   :option:`UnionTrimPrefixSuffix`, :option:`UnionIgnoredRegexp`
  - :option:`ValueTemplateParameterCase`,
    :option:`ValueTemplateParameterPrefix`,
    :option:`ValueTemplateParameterSuffix`,
+   :option:`ValueTemplateParameterTrimPrefixSuffix`,
    :option:`ValueTemplateParameterIgnoredRegexp`
- - :option:`VariableCase`, :option:`VariablePrefix`, :option:`VariableSuffix`,
+ - :option:`VariableCase`, :option:`VariablePrefix`,
+   :option:`VariableSuffix`, :option:`VariableTrimPrefixSuffix`,
    :option:`VariableIgnoredRegexp`, :option:`VariableHungarianPrefix`
  - :option:`VirtualMethodCase`, :option:`VirtualMethodPrefix`,
-   :option:`VirtualMethodSuffix`, :option:`VirtualMethodIgnoredRegexp`
+   :option:`VirtualMethodSuffix`, :option:`VirtualMethodTrimPrefixSuffix`,
+   :option:`VirtualMethodIgnoredRegexp`
 
 
 Options description
@@ -276,6 +321,11 @@ A detailed description of each option is presented below:
     When defined, the check will ensure all names by default will add the
     suffix with the given value (regardless of casing).
 
+.. option:: DefaultTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: DefaultHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -300,6 +350,11 @@ A detailed description of each option is presented below:
 
     When defined, the check will ensure abstract class names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: AbstractClassTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: AbstractClassHungarianPrefix
 
@@ -438,6 +493,11 @@ and thus no warnings will be emitted.
     When defined, the check will ensure class names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ClassTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ClassHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -492,6 +552,11 @@ After:
     When defined, the check will ensure class ``constexpr`` names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ClassConstexprTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ClassConstexprHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will have a
@@ -544,6 +609,11 @@ After:
     When defined, the check will ensure class constant names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ClassConstantTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ClassConstantHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -595,6 +665,11 @@ After:
 
     When defined, the check will ensure class member names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: ClassMemberTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: ClassMemberHungarianPrefix
 
@@ -734,6 +809,11 @@ After:
     When defined, the check will ensure constant names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ConstantTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ConstantHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -779,6 +859,11 @@ After:
 
     When defined, the check will ensure constant member names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: ConstantMemberTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: ConstantMemberHungarianPrefix
 
@@ -830,6 +915,11 @@ After:
     When defined, the check will ensure constant parameter names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ConstantParameterTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ConstantParameterHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -875,6 +965,11 @@ After:
 
     When defined, the check will ensure constant pointer parameter names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: ConstantPointerParameterTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: ConstantPointerParameterHungarianPrefix
 
@@ -1008,6 +1103,11 @@ After:
     When defined, the check will ensure constexpr variable names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ConstexprVariableTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ConstexprVariableHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -1093,6 +1193,11 @@ After:
 
     When defined, the check will ensure enumeration constant names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: EnumConstantTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: EnumConstantHungarianPrefix
 
@@ -1187,6 +1292,11 @@ After:
     When defined, the check will ensure global ``constexpr`` variable names
     will add the suffix with the given value (regardless of casing).
 
+.. option:: GlobalConstexprVariableTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: GlobalConstexprVariableHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will have a
@@ -1233,6 +1343,11 @@ After:
     When defined, the check will ensure global constant names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: GlobalConstantTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: GlobalConstantHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -1278,6 +1393,11 @@ After:
 
     When defined, the check will ensure global constant pointer names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: GlobalConstantPointerTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: GlobalConstantPointerHungarianPrefix
 
@@ -1365,6 +1485,11 @@ After:
     When defined, the check will ensure global pointer names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: GlobalPointerTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: GlobalPointerHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -1410,6 +1535,11 @@ After:
 
     When defined, the check will ensure global variable names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: GlobalVariableTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: GlobalVariableHungarianPrefix
 
@@ -1511,6 +1641,11 @@ After:
     When defined, the check will ensure local ``constexpr`` variable names will
     add the suffix with the given value (regardless of casing).
 
+.. option:: LocalConstexprVariableTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: LocalConstexprVariableHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will have a
@@ -1556,6 +1691,11 @@ After:
 
     When defined, the check will ensure local constant names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: LocalConstantTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: LocalConstantHungarianPrefix
 
@@ -1603,6 +1743,11 @@ After:
     When defined, the check will ensure local constant pointer names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: LocalConstantPointerTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: LocalConstantPointerHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -1648,6 +1793,11 @@ After:
 
     When defined, the check will ensure local pointer names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: LocalPointerTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: LocalPointerHungarianPrefix
 
@@ -1702,6 +1852,11 @@ camel case check applied to other variables.
 
     When defined, the check will ensure local variable names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: LocalVariableTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: LocalVariableHungarianPrefix
 
@@ -1791,6 +1946,11 @@ command line using the ``-D`` flag.
 
     When defined, the check will ensure member names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: MemberTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: MemberHungarianPrefix
 
@@ -1930,6 +2090,11 @@ After:
     When defined, the check will ensure parameter names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ParameterTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ParameterHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -2020,6 +2185,11 @@ After:
     When defined, the check will ensure pointer parameter names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: PointerParameterTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: PointerParameterHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -2065,6 +2235,11 @@ After:
 
     When defined, the check will ensure private member names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: PrivateMemberTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: PrivateMemberHungarianPrefix
 
@@ -2164,6 +2339,11 @@ After:
     When defined, the check will ensure protected member names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ProtectedMemberTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ProtectedMemberHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -2261,6 +2441,11 @@ After:
 
     When defined, the check will ensure public member names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: PublicMemberTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: PublicMemberHungarianPrefix
 
@@ -2360,6 +2545,11 @@ After:
     When defined, the check will ensure scoped enum constant names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: ScopedEnumConstantTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: ScopedEnumConstantHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -2405,6 +2595,11 @@ After:
 
     When defined, the check will ensure static ``constexpr`` variable names
     will add the suffix with the given value (regardless of casing).
+
+.. option:: StaticConstexprVariableTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: StaticConstexprVariableHungarianPrefix
 
@@ -2452,6 +2647,11 @@ After:
     When defined, the check will ensure static constant names will add the
     suffix with the given value (regardless of casing).
 
+.. option:: StaticConstantTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
+
 .. option:: StaticConstantHungarianPrefix
 
     When enabled, the check ensures that the declared identifier will
@@ -2497,6 +2697,11 @@ After:
 
     When defined, the check will ensure static variable names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: StaticVariableTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: StaticVariableHungarianPrefix
 
@@ -2881,6 +3086,11 @@ After:
 
     When defined, the check will ensure variable names will add the
     suffix with the given value (regardless of casing).
+
+.. option:: VariableTrimPrefixSuffix
+
+    When enabled, the check ensures that the declared identifier does not
+    start or end with any other prefix or suffix defined for this check
 
 .. option:: VariableHungarianPrefix
 

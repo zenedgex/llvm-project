@@ -235,6 +235,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
   crash from invalid ``Abbreviations`` option.
 
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check by adding the
+  `TrimPrefixSuffix` option, which trims all known other prefixes and suffixes
+  when fixing an identifier
+
 Removed checks
 ^^^^^^^^^^^^^^
 
