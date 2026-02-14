@@ -36,6 +36,8 @@ protected:
 
 private:
   lldb::addr_t m_pcb_addr;
+
+  int GetOsreldate();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_ARM64_H
