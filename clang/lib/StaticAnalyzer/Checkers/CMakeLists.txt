@@ -116,6 +116,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   TraversalChecker.cpp
   TrustNonnullChecker.cpp
   TrustReturnsNonnullChecker.cpp
+  UnconditionalVAArgChecker.cpp
   UndefBranchChecker.cpp
   UndefCapturedBlockVarChecker.cpp
   UndefResultChecker.cpp
