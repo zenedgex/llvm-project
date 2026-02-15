@@ -480,6 +480,7 @@ struct CodeCompletionBuilder {
       getSignature(*SemaCCS, &S.Signature, &S.SnippetSuffix, C.SemaResult->Kind,
                    C.SemaResult->CursorKind,
                    /*IncludeFunctionArguments=*/C.SemaResult->FunctionCanBeCall,
+                   /*IsDefinition=*/C.SemaResult->DeclaringEntity,
                    /*RequiredQualifiers=*/&Completion.RequiredQualifier);
       S.ReturnType = getReturnType(*SemaCCS);
       if (C.SemaResult->Kind == CodeCompletionResult::RK_Declaration)

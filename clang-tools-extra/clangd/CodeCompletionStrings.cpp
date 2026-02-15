@@ -39,16 +39,29 @@ void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
   }
 }
 
-void appendOptionalChunk(const CodeCompletionString &CCS, std::string *Out) {
+/// Removes the value for defaults arguments.
+static void addWithoutValue(std::string *Out, const std::string &ToAdd) {
+  size_t Val = ToAdd.find('=');
+  if (Val != ToAdd.npos)
+    *Out += ToAdd.substr(0, Val - 1); // removing value in definition
+  else
+    *Out += ToAdd;
+}
+
+void appendOptionalChunk(const CodeCompletionString &CCS, std::string *Out,
+                         bool RemoveValues = false) {
   for (const CodeCompletionString::Chunk &C : CCS) {
     switch (C.Kind) {
     case CodeCompletionString::CK_Optional:
       assert(C.Optional &&
              "Expected the optional code completion string to be non-null.");
-      appendOptionalChunk(*C.Optional, Out);
+      appendOptionalChunk(*C.Optional, Out, RemoveValues);
       break;
     default:
-      *Out += C.Text;
+      if (RemoveValues)
+        addWithoutValue(Out, C.Text);
+      else
+        *Out += C.Text;
       break;
     }
   }
@@ -164,7 +177,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet,
                   CodeCompletionResult::ResultKind ResultKind,
                   CXCursorKind CursorKind, bool IncludeFunctionArguments,
-                  std::string *RequiredQualifiers) {
+                  bool IsDefinition, std::string *RequiredQualifiers) {
   // Placeholder with this index will be $0 to mark final cursor position.
   // Usually we do not add $0, so the cursor is placed at end of completed text.
   unsigned CursorSnippetArg = std::numeric_limits<unsigned>::max();
@@ -184,8 +197,8 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
   unsigned SnippetArg = 0;
   bool HadObjCArguments = false;
   bool HadInformativeChunks = false;
+  int IsTemplateArgument = 0;
 
-  std::optional<unsigned> TruncateSnippetAt;
   for (const auto &Chunk : CCS) {
     // Informative qualifier chunks only clutter completion results, skip
     // them.
@@ -252,26 +265,38 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
         }
       }
       break;
-    case CodeCompletionString::CK_Text:
+    case CodeCompletionString::CK_FunctionQualifier:
+      if (IsDefinition) // Only for definition
+        *Snippet += Chunk.Text;
       *Signature += Chunk.Text;
+      break;
+    case CodeCompletionString::CK_Text:
       *Snippet += Chunk.Text;
+      *Signature += Chunk.Text;
       break;
     case CodeCompletionString::CK_Optional:
       assert(Chunk.Optional);
       // No need to create placeholders for default arguments in Snippet.
       appendOptionalChunk(*Chunk.Optional, Signature);
+      // complete args without default value in definition
+      if (IsDefinition)
+        appendOptionalChunk(*Chunk.Optional, Snippet, /*RemoveValues=*/true);
       break;
     case CodeCompletionString::CK_Placeholder:
       *Signature += Chunk.Text;
-      ++SnippetArg;
-      if (SnippetArg == CursorSnippetArg) {
-        // We'd like to make $0 a placeholder too, but vscode does not support
-        // this (https://github.com/microsoft/vscode/issues/152837).
-        *Snippet += "$0";
-      } else {
-        *Snippet += "${" + std::to_string(SnippetArg) + ':';
-        appendEscapeSnippet(Chunk.Text, Snippet);
-        *Snippet += '}';
+      if (IncludeFunctionArguments) {
+        ++SnippetArg;
+        if (SnippetArg == CursorSnippetArg) {
+          // We'd like to make $0 a placeholder too, but vscode does not support
+          // this (https://github.com/microsoft/vscode/issues/152837).
+          *Snippet += "$0";
+        } else {
+          *Snippet += "${" + std::to_string(SnippetArg) + ':';
+          appendEscapeSnippet(Chunk.Text, Snippet);
+          *Snippet += '}';
+        }
+      } else if (IsDefinition) { // completion without snippets
+        *Snippet += Chunk.Text;
       }
       break;
     case CodeCompletionString::CK_Informative:
@@ -290,28 +315,35 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       llvm_unreachable("Unexpected CK_CurrentParameter while collecting "
                        "CompletionItems");
       break;
+    case CodeCompletionString::CK_LeftAngle:
+      // Do not add template arguments in address of a function
+      if (IsDefinition || IncludeFunctionArguments) {
+        IsTemplateArgument++;
+        *Snippet += Chunk.Text;
+      }
+      *Signature += Chunk.Text;
+      break;
+    case CodeCompletionString::CK_RightAngle:
+      if (IsDefinition || IncludeFunctionArguments || IsTemplateArgument) {
+        IsTemplateArgument--;
+        *Snippet += Chunk.Text;
+      }
+      *Signature += Chunk.Text;
+      break;
     case CodeCompletionString::CK_LeftParen:
-      // We're assuming that a LeftParen in a declaration starts a function
-      // call, and arguments following the parenthesis could be discarded if
-      // IncludeFunctionArguments is false.
-      if (!IncludeFunctionArguments &&
-          ResultKind == CodeCompletionResult::RK_Declaration)
-        TruncateSnippetAt.emplace(Snippet->size());
-      [[fallthrough]];
     case CodeCompletionString::CK_RightParen:
     case CodeCompletionString::CK_LeftBracket:
     case CodeCompletionString::CK_RightBracket:
     case CodeCompletionString::CK_LeftBrace:
     case CodeCompletionString::CK_RightBrace:
-    case CodeCompletionString::CK_LeftAngle:
-    case CodeCompletionString::CK_RightAngle:
     case CodeCompletionString::CK_Comma:
     case CodeCompletionString::CK_Colon:
     case CodeCompletionString::CK_SemiColon:
     case CodeCompletionString::CK_Equal:
     case CodeCompletionString::CK_HorizontalSpace:
       *Signature += Chunk.Text;
-      *Snippet += Chunk.Text;
+      if (IncludeFunctionArguments || IsDefinition || IsTemplateArgument)
+        *Snippet += Chunk.Text;
       break;
     case CodeCompletionString::CK_VerticalSpace:
       *Snippet += Chunk.Text;
@@ -319,8 +351,6 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
       break;
     }
   }
-  if (TruncateSnippetAt)
-    *Snippet = Snippet->substr(0, *TruncateSnippetAt);
 }
 
 std::string formatDocumentation(const CodeCompletionString &CCS,

@@ -325,7 +325,9 @@ public:
   ///
   /// \param BaseExprType the object type in a member access expression,
   /// if any.
-  bool canFunctionBeCalled(const NamedDecl *ND, QualType BaseExprType) const;
+  bool canFunctionBeCalled(const NamedDecl *ND, QualType BaseExprType,
+                           bool IsBorrowedContext,
+                           bool IsAddressOfOperand) const;
 
   /// Decide whether or not a use of member function Decl can be a call.
   ///
@@ -369,7 +371,8 @@ public:
   /// \param BaseExprType the type of expression that precedes the "." or "->"
   /// in a member access expression.
   void AddResult(Result R, DeclContext *CurContext, NamedDecl *Hiding,
-                 bool InBaseClass, QualType BaseExprType);
+                 bool InBaseClass, QualType BaseExprType,
+                 bool IsBorrowedContext, bool IsAddressOfOperand);
 
   /// Add a new non-declaration result to this result set.
   void AddResult(Result R);
@@ -1342,7 +1345,13 @@ bool ResultBuilder::canCxxMethodBeCalled(const CXXMethodDecl *Method,
 }
 
 bool ResultBuilder::canFunctionBeCalled(const NamedDecl *ND,
-                                        QualType BaseExprType) const {
+                                        QualType BaseExprType,
+                                        bool IsBorrowedContext = false,
+                                        bool IsAddressOfOperand = false) const {
+  // If context is borrowed, it is always a declaration so function cannot be
+  // called. If we are waiting for the address of operand, it is not a call.
+  if (IsBorrowedContext || IsAddressOfOperand)
+    return false;
   // We apply heuristics only to CCC_Symbol:
   // * CCC_{Arrow,Dot}MemberAccess reflect member access expressions:
   //   f.method() and f->method(). These are always calls.
@@ -1365,7 +1374,9 @@ bool ResultBuilder::canFunctionBeCalled(const NamedDecl *ND,
 
 void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
                               NamedDecl *Hiding, bool InBaseClass = false,
-                              QualType BaseExprType = QualType()) {
+                              QualType BaseExprType = QualType(),
+                              bool IsBorrowedContext = false,
+                              bool IsAddressOfOperand = false) {
   if (R.Kind != Result::RK_Declaration) {
     // For non-declaration results, just add the result.
     Results.push_back(R);
@@ -1504,7 +1515,10 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
         OverloadSet.Add(Method, Results.size());
       }
 
-  R.FunctionCanBeCall = canFunctionBeCalled(R.getDeclaration(), BaseExprType);
+  // if Context is borrowed, we are in a defintion, meaning not a call
+  R.FunctionCanBeCall = canFunctionBeCalled(
+      R.getDeclaration(), BaseExprType, IsBorrowedContext, IsAddressOfOperand);
+  R.DeclaringEntity = IsBorrowedContext;
 
   // Insert this result into the set of results.
   Results.push_back(R);
@@ -1762,7 +1776,8 @@ public:
       QualType BaseType = QualType(),
       std::vector<FixItHint> FixIts = std::vector<FixItHint>())
       : Results(Results), InitialLookupCtx(InitialLookupCtx),
-        FixIts(std::move(FixIts)) {
+        FixIts(std::move(FixIts)), IsBorrowedContext(false),
+        IsAddressOfOperand(false) {
     NamingClass = llvm::dyn_cast<CXXRecordDecl>(InitialLookupCtx);
     // If BaseType was not provided explicitly, emulate implicit 'this->'.
     if (BaseType.isNull()) {
@@ -1777,13 +1792,22 @@ public:
     this->BaseType = BaseType;
   }
 
+  void setIsBorrowedContext(bool isBorrowedContext) {
+    IsBorrowedContext = isBorrowedContext;
+  }
+
+  void setIsAddressOfOperand(bool isAddressOfOperand) {
+    IsAddressOfOperand = isAddressOfOperand;
+  }
+
   void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                  bool InBaseClass) override {
     ResultBuilder::Result Result(ND, Results.getBasePriority(ND),
                                  /*Qualifier=*/std::nullopt,
                                  /*QualifierIsInformative=*/false,
                                  IsAccessible(ND, Ctx), FixIts);
-    Results.AddResult(Result, InitialLookupCtx, Hiding, InBaseClass, BaseType);
+    Results.AddResult(Result, InitialLookupCtx, Hiding, InBaseClass, BaseType,
+                      IsBorrowedContext, IsAddressOfOperand);
   }
 
   void EnteredContext(DeclContext *Ctx) override {
@@ -1791,6 +1815,8 @@ public:
   }
 
 private:
+  bool IsBorrowedContext;
+  bool IsAddressOfOperand;
   bool IsAccessible(NamedDecl *ND, DeclContext *Ctx) {
     // Naming class to use for access check. In most cases it was provided
     // explicitly (e.g. member access (lhs.foo) or qualified lookup (X::)),
@@ -3440,17 +3466,17 @@ static void AddFunctionTypeQuals(CodeCompletionBuilder &Result,
 
   // Handle single qualifiers without copying
   if (Quals.hasOnlyConst()) {
-    Result.AddInformativeChunk(" const");
+    Result.AddFunctionQualifierChunk(" const");
     return;
   }
 
   if (Quals.hasOnlyVolatile()) {
-    Result.AddInformativeChunk(" volatile");
+    Result.AddFunctionQualifierChunk(" volatile");
     return;
   }
 
   if (Quals.hasOnlyRestrict()) {
-    Result.AddInformativeChunk(" restrict");
+    Result.AddFunctionQualifierChunk(" restrict");
     return;
   }
 
@@ -3462,7 +3488,7 @@ static void AddFunctionTypeQuals(CodeCompletionBuilder &Result,
     QualsStr += " volatile";
   if (Quals.hasRestrict())
     QualsStr += " restrict";
-  Result.AddInformativeChunk(Result.getAllocator().CopyString(QualsStr));
+  Result.AddFunctionQualifierChunk(Result.getAllocator().CopyString(QualsStr));
 }
 
 static void
@@ -5072,7 +5098,7 @@ static void AddLambdaCompletion(ResultBuilder &Results,
 /// Perform code-completion in an expression context when we know what
 /// type we're looking for.
 void SemaCodeCompletion::CodeCompleteExpression(
-    Scope *S, const CodeCompleteExpressionData &Data) {
+    Scope *S, const CodeCompleteExpressionData &Data, bool IsAddressOfOperand) {
   ResultBuilder Results(
       SemaRef, CodeCompleter->getAllocator(),
       CodeCompleter->getCodeCompletionTUInfo(),
@@ -5100,6 +5126,7 @@ void SemaCodeCompletion::CodeCompleteExpression(
     Results.Ignore(Data.IgnoreDecls[I]);
 
   CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext);
+  Consumer.setIsAddressOfOperand(IsAddressOfOperand);
   SemaRef.LookupVisibleDecls(S, Sema::LookupOrdinaryName, Consumer,
                              CodeCompleter->includeGlobals(),
                              CodeCompleter->loadExternal());
@@ -5143,9 +5170,11 @@ void SemaCodeCompletion::CodeCompleteExpression(
 
 void SemaCodeCompletion::CodeCompleteExpression(Scope *S,
                                                 QualType PreferredType,
-                                                bool IsParenthesized) {
+                                                bool IsParenthesized,
+                                                bool IsAddressOfOperand) {
   return CodeCompleteExpression(
-      S, CodeCompleteExpressionData(PreferredType, IsParenthesized));
+      S, CodeCompleteExpressionData(PreferredType, IsParenthesized),
+      IsAddressOfOperand);
 }
 
 void SemaCodeCompletion::CodeCompletePostfixExpression(Scope *S, ExprResult E,
@@ -6820,11 +6849,9 @@ void SemaCodeCompletion::CodeCompleteAfterIf(Scope *S, bool IsBracedThen) {
                             Results.size());
 }
 
-void SemaCodeCompletion::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
-                                                 bool EnteringContext,
-                                                 bool IsUsingDeclaration,
-                                                 QualType BaseType,
-                                                 QualType PreferredType) {
+void SemaCodeCompletion::CodeCompleteQualifiedId(
+    Scope *S, CXXScopeSpec &SS, bool EnteringContext, bool IsUsingDeclaration,
+    bool IsAddressOfOperand, QualType BaseType, QualType PreferredType) {
   if (SS.isEmpty() || !CodeCompleter)
     return;
 
@@ -6859,12 +6886,25 @@ void SemaCodeCompletion::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   // resolves to a dependent record.
   DeclContext *Ctx = SemaRef.computeDeclContext(SS, /*EnteringContext=*/true);
 
+  // This is used to borrow context to access private methods for completion
+  DeclContext *SavedContext = nullptr;
+  if (!SemaRef.CurContext->isFunctionOrMethod() &&
+      !SemaRef.CurContext->isRecord()) {
+    // We are in global scope or namespace
+    SavedContext = SemaRef.CurContext;
+    SemaRef.CurContext = Ctx; // Simulate that we are in class scope
+                              // to access private methods
+  }
+
   // Try to instantiate any non-dependent declaration contexts before
   // we look in them. Bail out if we fail.
   NestedNameSpecifier NNS = SS.getScopeRep();
   if (NNS && !NNS.isDependent()) {
-    if (Ctx == nullptr || SemaRef.RequireCompleteDeclContext(SS, Ctx))
+    if (Ctx == nullptr || SemaRef.RequireCompleteDeclContext(SS, Ctx)) {
+      if (SavedContext)
+        SemaRef.CurContext = SavedContext;
       return;
+    }
   }
 
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
@@ -6905,11 +6945,15 @@ void SemaCodeCompletion::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   if (Ctx &&
       (CodeCompleter->includeNamespaceLevelDecls() || !Ctx->isFileContext())) {
     CodeCompletionDeclConsumer Consumer(Results, Ctx, BaseType);
+    Consumer.setIsBorrowedContext(SavedContext != nullptr);
+    Consumer.setIsAddressOfOperand(IsAddressOfOperand);
     SemaRef.LookupVisibleDecls(Ctx, Sema::LookupOrdinaryName, Consumer,
                                /*IncludeGlobalScope=*/true,
                                /*IncludeDependentBases=*/true,
                                CodeCompleter->loadExternal());
   }
+  if (SavedContext)
+    SemaRef.CurContext = SavedContext;
 
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
                             Results.getCompletionContext(), Results.data(),
