@@ -380,6 +380,9 @@ AST Matchers
 ------------
 - Add ``functionTypeLoc`` matcher for matching ``FunctionTypeLoc``.
 
+- Fixed `isStaticStorageClass` not matching the definition if the definition was
+  not marked `static` as well.
+
 clang-format
 ------------
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the 
