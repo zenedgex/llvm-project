@@ -466,6 +466,12 @@ template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
   using arg_types = rpc::tuple<Args...>;
   static constexpr uint64_t ARITY = sizeof...(Args);
 };
+template <typename R, typename... Args>
+struct function_traits<R (*)(Args...) noexcept> {
+  using return_type = R;
+  using arg_types = rpc::tuple<Args...>;
+  static constexpr uint64_t ARITY = sizeof...(Args);
+};
 template <typename T> T &&declval();
 template <typename T>
 struct function_traits
