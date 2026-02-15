@@ -402,6 +402,92 @@ bool X86ATTInstPrinter::printVecCompareInstr(const MCInst *MI,
   return false;
 }
 
+bool X86ATTInstPrinter::printShiftBy1NFNDInstr(const MCInst *MI,
+                                               uint64_t Address,
+                                               raw_ostream &OS) {
+  // Emit explicit $1 for shift-by-1 NF+ND to match binutils behavior.
+  const char *Mnemonic = nullptr;
+  const char *Suffix = nullptr;
+
+  switch (MI->getOpcode()) {
+  default:
+    return false;
+
+  case X86::SHL16r1_NF_ND:
+    Mnemonic = "shl";
+    Suffix = "w";
+    break;
+  case X86::SHL32r1_NF_ND:
+    Mnemonic = "shl";
+    Suffix = "l";
+    break;
+  case X86::SHL64r1_NF_ND:
+    Mnemonic = "shl";
+    Suffix = "q";
+    break;
+
+  case X86::SHR16r1_NF_ND:
+    Mnemonic = "shr";
+    Suffix = "w";
+    break;
+  case X86::SHR32r1_NF_ND:
+    Mnemonic = "shr";
+    Suffix = "l";
+    break;
+  case X86::SHR64r1_NF_ND:
+    Mnemonic = "shr";
+    Suffix = "q";
+    break;
+
+  case X86::SAR16r1_NF_ND:
+    Mnemonic = "sar";
+    Suffix = "w";
+    break;
+  case X86::SAR32r1_NF_ND:
+    Mnemonic = "sar";
+    Suffix = "l";
+    break;
+  case X86::SAR64r1_NF_ND:
+    Mnemonic = "sar";
+    Suffix = "q";
+    break;
+
+  case X86::ROL16r1_NF_ND:
+    Mnemonic = "rol";
+    Suffix = "w";
+    break;
+  case X86::ROL32r1_NF_ND:
+    Mnemonic = "rol";
+    Suffix = "l";
+    break;
+  case X86::ROL64r1_NF_ND:
+    Mnemonic = "rol";
+    Suffix = "q";
+    break;
+
+  case X86::ROR16r1_NF_ND:
+    Mnemonic = "ror";
+    Suffix = "w";
+    break;
+  case X86::ROR32r1_NF_ND:
+    Mnemonic = "ror";
+    Suffix = "l";
+    break;
+  case X86::ROR64r1_NF_ND:
+    Mnemonic = "ror";
+    Suffix = "q";
+    break;
+  }
+
+  // NDD operands are stored as (dst, src).
+  OS << '\t' << Mnemonic << Suffix << "\t$1, ";
+  printOperand(MI, 1, OS);
+  OS << ", ";
+  printOperand(MI, 0, OS);
+
+  return true;
+}
+
 void X86ATTInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);

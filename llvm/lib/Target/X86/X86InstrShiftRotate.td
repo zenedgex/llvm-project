@@ -70,7 +70,7 @@ multiclass ShiftRotate<string m, Format RegMRM, Format MemMRM, SDPatternOperator
       // GNU binutils distinguish them by adding an explicit $1 to asm string of 8r1_ND. But we haven't support
       // constant immediate in asm string for X86 in TD. So we add DisassembleOnly for 8r1_ND for the time being.
       let Predicates = [In64BitMode] in {
-        def 8r1_ND  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8, null_frag, 1>, DisassembleOnly;
+        def 8r1_ND  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8, null_frag, 1>;
         def 16r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi16, null_frag, 1>, PD;
         def 32r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi32, null_frag, 1>;
         def 64r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi64, null_frag, 1>;
@@ -181,7 +181,7 @@ multiclass ShiftRotate_NF<string m, Format RegMRM, Format MemMRM, SchedReadWrite
       def 32r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi32>, NF;
       def 64r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi64>, NF;
 
-      def 8r1_NF_ND  : UnaryOpR_R<0xD1, RegMRM, m, Xi8, null_frag, 1>, EVEX_NF, DisassembleOnly;
+      def 8r1_NF_ND  : UnaryOpR_R<0xD1, RegMRM, m, Xi8, null_frag, 1>, EVEX_NF;
       def 16r1_NF_ND : UnaryOpR_R<0xD1, RegMRM, m, Xi16, null_frag, 1>, EVEX_NF, PD;
       def 32r1_NF_ND : UnaryOpR_R<0xD1, RegMRM, m, Xi32, null_frag, 1>, EVEX_NF;
       def 64r1_NF_ND : UnaryOpR_R<0xD1, RegMRM, m, Xi64, null_frag, 1>, EVEX_NF;
