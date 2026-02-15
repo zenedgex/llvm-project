@@ -4341,6 +4341,16 @@ libc_math_function(
     additional_deps = [":__support_math_bf16addf128"],
 )
 
+libc_math_function(name = "bf16addl")
+
+libc_math_function(name = "bf16divl")
+
+libc_math_function(name = "bf16fmal")
+
+libc_math_function(name = "bf16mull")
+
+libc_math_function(name = "bf16subl")
+
 libc_math_function(name = "canonicalize")
 
 libc_math_function(name = "canonicalizef")
