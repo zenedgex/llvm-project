@@ -3730,6 +3730,7 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
   Out << ", canAutoHide: " << GVFlags.CanAutoHide;
   Out << ", importType: "
       << getImportTypeName(GlobalValueSummary::ImportKind(GVFlags.ImportType));
+  Out << ", notRenameOnPromotion: " << GVFlags.NotRenameOnPromotion;
   Out << ")";
 
   if (Summary.getSummaryKind() == GlobalValueSummary::AliasKind)
