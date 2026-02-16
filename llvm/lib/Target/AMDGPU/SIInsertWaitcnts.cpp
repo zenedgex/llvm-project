@@ -194,6 +194,22 @@ template <> struct enum_iteration_traits<WaitEventType> {
 
 namespace {
 
+bool isExpertMode(const MachineFunction &MF, const GCNSubtarget &ST) {
+  return ST.hasExpertSchedulingMode() &&
+                   (ExpertSchedulingModeFlag.getNumOccurrences()
+                        ? ExpertSchedulingModeFlag
+                        : MF.getFunction()
+                              .getFnAttribute("amdgpu-expert-scheduling-mode")
+                              .getValueAsBool());
+
+}
+
+InstCounterType getMaxCounter(const GCNSubtarget &ST, bool IsExpertMode) {
+  if (ST.hasExtendedWaitCounts())
+    return IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
+  return NUM_NORMAL_INST_CNTS;
+}
+
 /// Return an iterator over all events between VMEM_ACCESS (the first event)
 /// and \c MaxEvent (exclusive, default value yields an enumeration over
 /// all counters).
@@ -354,23 +370,23 @@ protected:
   const GCNSubtarget &ST;
   const SIInstrInfo &TII;
   AMDGPU::IsaVersion IV;
-  InstCounterType MaxCounter;
   bool OptNone;
   bool ExpandWaitcntProfiling = false;
   const AMDGPU::HardwareLimits *Limits = nullptr;
+  bool IsExpertMode = false;
 
 public:
   WaitcntGenerator() = delete;
   WaitcntGenerator(const WaitcntGenerator &) = delete;
-  WaitcntGenerator(const MachineFunction &MF, InstCounterType MaxCounter,
+  WaitcntGenerator(const MachineFunction &MF,
                    const AMDGPU::HardwareLimits *Limits)
       : ST(MF.getSubtarget<GCNSubtarget>()), TII(*ST.getInstrInfo()),
-        IV(AMDGPU::getIsaVersion(ST.getCPU())), MaxCounter(MaxCounter),
+        IV(AMDGPU::getIsaVersion(ST.getCPU())),
         OptNone(MF.getFunction().hasOptNone() ||
                 MF.getTarget().getOptLevel() == CodeGenOptLevel::None),
         ExpandWaitcntProfiling(
             MF.getFunction().hasFnAttribute("amdgpu-expand-waitcnt-profiling")),
-        Limits(Limits) {}
+        Limits(Limits), IsExpertMode(isExpertMode(MF, ST)) {}
 
   // Return true if the current function should be compiled with no
   // optimization.
@@ -441,7 +457,9 @@ class WaitcntGeneratorPreGFX12 final : public WaitcntGenerator {
           WaitEventSet()};
 
 public:
-  using WaitcntGenerator::WaitcntGenerator;
+  WaitcntGeneratorPreGFX12(MachineFunction *MF,
+                           const AMDGPU::HardwareLimits *Limits)
+      : WaitcntGenerator(*MF, Limits) {}
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
                           MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
@@ -461,7 +479,6 @@ public:
 
 class WaitcntGeneratorGFX12Plus final : public WaitcntGenerator {
 protected:
-  bool IsExpertMode;
   static constexpr const WaitEventSet
       WaitEventMaskForInstGFX12Plus[NUM_INST_CNTS] = {
           WaitEventSet({VMEM_ACCESS, GLOBAL_INV_ACCESS}),
@@ -480,10 +497,8 @@ protected:
 public:
   WaitcntGeneratorGFX12Plus() = delete;
   WaitcntGeneratorGFX12Plus(const MachineFunction &MF,
-                            InstCounterType MaxCounter,
-                            const AMDGPU::HardwareLimits *Limits,
-                            bool IsExpertMode)
-      : WaitcntGenerator(MF, MaxCounter, Limits), IsExpertMode(IsExpertMode) {}
+                            const AMDGPU::HardwareLimits *Limits)
+      : WaitcntGenerator(MF, Limits) {}
 
   bool
   applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
@@ -515,7 +530,6 @@ public:
   const SIRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   InstCounterType SmemAccessCounter;
-  InstCounterType MaxCounter;
   bool IsExpertMode = false;
 
 private:
@@ -1067,7 +1081,8 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   InstCounterType T = Context->getCounterFromEvent(E);
-  assert(T < Context->MaxCounter);
+  assert(T < getMaxCounter(*Context->ST, Context->IsExpertMode) &&
+         "T not supported in current mode!");
 
   unsigned UB = getScoreUB(T);
   unsigned CurrScore = UB + 1;
@@ -1287,7 +1302,7 @@ void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst) {
 void WaitcntBrackets::print(raw_ostream &OS) const {
   const GCNSubtarget *ST = Context->ST;
 
-  for (auto T : inst_counter_types(Context->MaxCounter)) {
+  for (auto T : inst_counter_types(getMaxCounter(*ST, Context->IsExpertMode))) {
     unsigned SR = getScoreRange(T);
     switch (T) {
     case LOAD_CNT:
@@ -1745,7 +1760,7 @@ bool WaitcntGenerator::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
 bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
     WaitcntBrackets &ScoreBrackets, MachineInstr &OldWaitcntInstr,
     AMDGPU::Waitcnt &Wait, MachineBasicBlock::instr_iterator It) const {
-  assert(isNormalMode(MaxCounter));
+  assert(isNormalMode(getMaxCounter(ST, IsExpertMode)));
 
   bool Modified = false;
   MachineInstr *WaitcntInstr = nullptr;
@@ -1867,7 +1882,7 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
 bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
     MachineBasicBlock &Block, MachineBasicBlock::instr_iterator It,
     AMDGPU::Waitcnt Wait, const WaitcntBrackets &ScoreBrackets) {
-  assert(isNormalMode(MaxCounter));
+  assert(isNormalMode(getMaxCounter(ST, IsExpertMode)));
 
   bool Modified = false;
   const DebugLoc &DL = Block.findDebugLoc(It);
@@ -1984,7 +1999,7 @@ WaitcntGeneratorGFX12Plus::getAllZeroWaitcnt(bool IncludeVSCnt) const {
 bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     WaitcntBrackets &ScoreBrackets, MachineInstr &OldWaitcntInstr,
     AMDGPU::Waitcnt &Wait, MachineBasicBlock::instr_iterator It) const {
-  assert(!isNormalMode(MaxCounter));
+  assert(!isNormalMode(getMaxCounter(ST, IsExpertMode)));
 
   bool Modified = false;
   MachineInstr *CombinedLoadDsCntInstr = nullptr;
@@ -2258,7 +2273,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
 bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
     MachineBasicBlock &Block, MachineBasicBlock::instr_iterator It,
     AMDGPU::Waitcnt Wait, const WaitcntBrackets &ScoreBrackets) {
-  assert(!isNormalMode(MaxCounter));
+  assert(!isNormalMode(getMaxCounter(ST, IsExpertMode)));
 
   bool Modified = false;
   const DebugLoc &DL = Block.findDebugLoc(It);
@@ -2998,8 +3013,10 @@ bool WaitcntBrackets::mergeAsyncMarks(ArrayRef<MergeInfo> MergeInfos,
   unsigned OurSize = AsyncMarks.size();
   unsigned MergeCount = std::min(OtherSize, OurSize);
   assert(OurSize == MaxSize);
+  const InstCounterType MaxCounter =
+      getMaxCounter(*Context->ST, Context->IsExpertMode);
   for (unsigned Idx = 1; Idx <= MergeCount; ++Idx) {
-    for (auto T : inst_counter_types(Context->MaxCounter)) {
+    for (auto T : inst_counter_types(MaxCounter)) {
       StrictDom |= mergeScore(MergeInfos[T], AsyncMarks[OurSize - Idx][T],
                               OtherMarks[OtherSize - Idx][T]);
     }
@@ -3034,7 +3051,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   // Array to store MergeInfo for each counter type
   MergeInfo MergeInfos[NUM_INST_CNTS];
 
-  for (auto T : inst_counter_types(Context->MaxCounter)) {
+  for (auto T :
+       inst_counter_types(getMaxCounter(*Context->ST, Context->IsExpertMode))) {
     // Merge event flags for this counter
     const WaitEventSet &EventsForT = Context->getWaitEvents(T);
     const WaitEventSet OldEvents = PendingEvents & EventsForT;
@@ -3097,7 +3115,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
   }
 
   StrictDom |= mergeAsyncMarks(MergeInfos, Other.AsyncMarks);
-  for (auto T : inst_counter_types(Context->MaxCounter))
+  for (auto T :
+       inst_counter_types(getMaxCounter(*Context->ST, Context->IsExpertMode)))
     StrictDom |= mergeScore(MergeInfos[T], AsyncScore[T], Other.AsyncScore[T]);
 
   purgeEmptyTrackingData();
@@ -3557,6 +3576,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  IsExpertMode = isExpertMode(MF, *ST);
 
   AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(ST->getCPU());
 
@@ -3564,21 +3584,11 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   Limits = AMDGPU::HardwareLimits(IV);
 
   if (ST->hasExtendedWaitCounts()) {
-    IsExpertMode = ST->hasExpertSchedulingMode() &&
-                   (ExpertSchedulingModeFlag.getNumOccurrences()
-                        ? ExpertSchedulingModeFlag
-                        : MF.getFunction()
-                              .getFnAttribute("amdgpu-expert-scheduling-mode")
-                              .getValueAsBool());
-    MaxCounter = IsExpertMode ? NUM_EXPERT_INST_CNTS : NUM_EXTENDED_INST_CNTS;
     if (!WCG)
-      WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, MaxCounter, &Limits,
-                                                        IsExpertMode);
+      WCG = std::make_unique<WaitcntGeneratorGFX12Plus>(MF, &Limits);
   } else {
-    MaxCounter = NUM_NORMAL_INST_CNTS;
     if (!WCG)
-      WCG = std::make_unique<WaitcntGeneratorPreGFX12>(MF, NUM_NORMAL_INST_CNTS,
-                                                       &Limits);
+      WCG = std::make_unique<WaitcntGeneratorPreGFX12>(&MF, &Limits);
   }
 
   for (auto T : inst_counter_types())
