@@ -9,12 +9,17 @@
 #ifndef LLVM_LIBC_SRC_MATH_BF16DIVL_H
 #define LLVM_LIBC_SRC_MATH_BF16DIVL_H
 
+#include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/generic/div.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-bfloat16 bf16divl(long double x, long double y);
+LIBC_INLINE bfloat16 bf16divl(long double x, long double y) {
+  return fputil::generic::div<bfloat16>(x, y);
+}
 
 } // namespace LIBC_NAMESPACE_DECL
 

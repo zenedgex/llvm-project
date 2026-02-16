@@ -5214,14 +5214,12 @@ add_entrypoint_object(
 
 add_entrypoint_object(
   bf16divl
-  SRCS
-    bf16divl.cpp
   HDRS
     ../bf16divl.h
   DEPENDS
-    libc.src.__support.common
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
