@@ -973,7 +973,25 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
         sym.setFlags(NEEDS_GOT | NEEDS_GOT_NONAUTH);
     }
   } else if (needsPlt(expr)) {
-    sym.setFlags(NEEDS_PLT);
+    // For Hexagon TLS GD PLT relocations (call foo@GDPLT), the PLT entry should
+    // be for __tls_get_addr, not the TLS symbol. Create __tls_get_addr here
+    // with NEEDS_PLT so its PLT entry is created during postScanRelocations.
+    // hexagonTLSSymbolUpdate() will rebind the relocations later.
+    if (ctx.arg.emachine == EM_HEXAGON && sym.isTls() &&
+        (type == R_HEX_GD_PLT_B22_PCREL || type == R_HEX_GD_PLT_B22_PCREL_X ||
+         type == R_HEX_GD_PLT_B32_PCREL_X)) {
+      Symbol *s = ctx.symtab->find("__tls_get_addr");
+      if (!s) {
+        s = ctx.symtab->addSymbol(Undefined{ctx.internalFile, "__tls_get_addr",
+                                            STB_GLOBAL, STV_DEFAULT,
+                                            STT_NOTYPE});
+        s->isPreemptible = true;
+      }
+      if (!s->isInPlt(ctx))
+        s->setFlags(NEEDS_PLT);
+    } else {
+      sym.setFlags(NEEDS_PLT);
+    }
   } else if (LLVM_UNLIKELY(isIfunc)) {
     sym.setFlags(HAS_DIRECT_RELOC);
   }
@@ -2196,42 +2214,18 @@ bool ThunkCreator::createThunks(uint32_t pass,
 }
 
 // The following aid in the conversion of call x@GDPLT to call __tls_get_addr
-// hexagonNeedsTLSSymbol scans for relocations would require a call to
-// __tls_get_addr.
-// hexagonTLSSymbolUpdate rebinds the relocation to __tls_get_addr.
-bool elf::hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections) {
-  bool needTlsSymbol = false;
-  forEachInputSectionDescription(
-      outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
-        for (InputSection *isec : isd->sections)
-          for (Relocation &rel : isec->relocs())
-            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
-              needTlsSymbol = true;
-              return;
-            }
-      });
-  return needTlsSymbol;
-}
-
+// Rebind call x@GDPLT to call __tls_get_addr. The __tls_get_addr symbol and
+// its PLT entry are created during scanRelocations.
 void elf::hexagonTLSSymbolUpdate(Ctx &ctx) {
   Symbol *sym = ctx.symtab->find("__tls_get_addr");
   if (!sym)
     return;
-  bool needEntry = true;
   forEachInputSectionDescription(
       ctx.outputSections, [&](OutputSection *os, InputSectionDescription *isd) {
         for (InputSection *isec : isd->sections)
           for (Relocation &rel : isec->relocs())
-            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC) {
-              if (needEntry) {
-                if (sym->auxIdx == 0)
-                  sym->allocateAux(ctx);
-                addPltEntry(ctx, *ctx.in.plt, *ctx.in.gotPlt, *ctx.in.relaPlt,
-                            ctx.target->pltRel, *sym);
-                needEntry = false;
-              }
+            if (rel.sym->type == llvm::ELF::STT_TLS && rel.expr == R_PLT_PC)
               rel.sym = sym;
-            }
       });
 }
 
