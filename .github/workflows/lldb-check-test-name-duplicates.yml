@@ -32,7 +32,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          pip install --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
+          pip install --break-system-packages --require-hashes -r ./llvm/utils/git/requirements_pylint.txt
       
       - name: Get changed files
         id: changed-files
