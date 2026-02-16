@@ -11,12 +11,13 @@
 #define _LIBCPP___THREAD_THREAD_H
 
 #include <__assert>
+#include <__charconv/to_chars_integral.h>
 #include <__condition_variable/condition_variable.h>
 #include <__config>
 #include <__exception/terminate.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
-#include <__locale>
+#include <__fwd/ostream.h>
 #include <__memory/addressof.h>
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
@@ -30,11 +31,8 @@
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
+#include <limits>
 #include <tuple>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <sstream>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -147,10 +145,11 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
   // use a temporary stream instead and just output the thread
   // id representation as a string.
 
-  basic_ostringstream<_CharT, _Traits> __sstr;
-  __sstr.imbue(locale::classic());
-  __sstr << __id.__id_;
-  return __os << __sstr.str();
+  static const size_t __buffer_size = numeric_limits<__libcpp_thread_id>::digits10 + 1;
+  char __buffer[__buffer_size];
+  std::__to_chars_integral(__buffer, __buffer + __buffer_size, __id.__id_, 10);
+
+  return __os << __buffer;
 }
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
