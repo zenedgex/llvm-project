@@ -981,6 +981,97 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
+void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
+  assert(Plan.getExitBlocks().size() == 1 &&
+         "only a single-exit block is supported currently");
+  assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
+             Plan.getMiddleBlock() &&
+         "the exit block must have middle block as single predecessor");
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+
+  Header->splitAt(Header->getFirstNonPhi());
+
+  // Create the header mask, insert it in the header and branch on it.
+  auto *IV =
+      new VPWidenCanonicalIVRecipe(Header->getParent()->getCanonicalIV());
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  Builder.insert(IV);
+  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
+  VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
+  Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
+
+  VPBasicBlock *Latch = LoopRegion->getExitingBasicBlock();
+  VPValue *IVInc;
+  [[maybe_unused]] bool TermBranchOnCount =
+      match(Latch->getTerminator(),
+            m_BranchOnCount(m_VPValue(IVInc),
+                            m_Specific(&Plan.getVectorTripCount())));
+  assert(TermBranchOnCount &&
+         match(IVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
+                            m_Specific(&Plan.getVFxUF()))) &&
+         std::next(IVInc->getDefiningRecipe()->getIterator()) ==
+             Latch->getTerminator()->getIterator() &&
+         "Unexpected canonical iv increment");
+
+  // Split the latch at the IV update, and branch to it from the header mask.
+  VPBasicBlock *LatchSplit =
+      Latch->splitAt(IVInc->getDefiningRecipe()->getIterator());
+  VPBlockUtils::connectBlocks(Header, LatchSplit);
+
+  // Insert phis for any values in the predicated body used outside. Currently,
+  // this consists of header phis and extracts in the middle block.
+  // TODO: Handle all successors, not just the middle block when supporting
+  // early exits.
+  assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
+         "The vector loop region must have the middle block as its single "
+         "successor for now");
+  Builder.setInsertPoint(LatchSplit, LatchSplit->begin());
+  for (VPBasicBlock *VPBB : {Header, Plan.getMiddleBlock()}) {
+    for (VPRecipeBase &R : *VPBB) {
+      for (VPValue *V : R.operands()) {
+        VPRecipeBase *VR = V->getDefiningRecipe();
+        if (!VR || !VR->getRegion() || VR->getParent() == LatchSplit ||
+            VR->getParent() == Header)
+          continue;
+        assert((isa<VPHeaderPHIRecipe>(R) ||
+                match(&R, m_CombineOr(
+                              m_VPInstruction<VPInstruction::ExitingIVValue>(),
+                              m_ExtractLastPart(m_Specific(V))))) &&
+               "Unexpected user of value defined inside vector loop region");
+        // TODO: For reduction phis, use phi value instead of poison so we can
+        // remove the special casing for tail folding in
+        // LoopVectorizationPlanner::addReductionResultComputation
+        VPValue *Poison = Plan.getOrAddLiveIn(
+            PoisonValue::get(V->getUnderlyingValue()->getType()));
+        VPInstruction *Phi = Builder.createScalarPhi({V, Poison}, {});
+        V->replaceUsesWithIf(Phi,
+                             [&Phi](VPUser &U, unsigned) { return &U != Phi; });
+      }
+    }
+  }
+
+  // Any extract of the last element must be updated to extract from the last
+  // active lane of the header mask instead (i.e., the lane corresponding to the
+  // last active iteration).
+  Builder.setInsertPoint(Plan.getMiddleBlock()->getTerminator());
+  for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
+    VPValue *Op;
+    if (!match(&R, m_CombineOr(
+                       m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),
+                       m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op))))))
+      continue;
+
+    // Compute the index of the last active lane.
+    VPValue *LastActiveLane =
+        Builder.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
+    auto *Ext =
+        Builder.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
+    R.getVPSingleValue()->replaceAllUsesWith(Ext);
+  }
+}
+
 /// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
 /// connecting it to both vector and scalar preheaders. Updates scalar
 /// preheader phis to account for the new predecessor.

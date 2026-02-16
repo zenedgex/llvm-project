@@ -8228,10 +8228,13 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     InterleaveGroups.insert(IG);
   }
 
+  if (CM.foldTailByMasking())
+    VPlanTransforms::foldTailByMasking(*Plan);
+
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
+  VPlanTransforms::introduceMasksAndLinearize(*Plan);
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
