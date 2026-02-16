@@ -6418,6 +6418,7 @@ static bool isZeroInitialized(QualType T, const APValue &V) {
   switch (V.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
   case APValue::AddrLabelDiff:
     return false;
 
@@ -6571,6 +6572,7 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
   switch (V.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
     Out << 'L';
     mangleType(T);
     Out << 'E';
