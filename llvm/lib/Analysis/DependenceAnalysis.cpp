@@ -1070,58 +1070,6 @@ void DependenceInfo::collectCommonLoops(const SCEV *Expression,
   }
 }
 
-void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
-
-  unsigned widestWidthSeen = 0;
-  Type *widestType;
-
-  // Go through each pair and find the widest bit to which we need
-  // to extend all of them.
-  for (Subscript *Pair : Pairs) {
-    const SCEV *Src = Pair->Src;
-    const SCEV *Dst = Pair->Dst;
-    IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
-    IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
-    if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy &&
-             "This function only unify integer types and "
-             "expect Src and Dst share the same type otherwise.");
-      continue;
-    }
-    if (SrcTy->getBitWidth() > widestWidthSeen) {
-      widestWidthSeen = SrcTy->getBitWidth();
-      widestType = SrcTy;
-    }
-    if (DstTy->getBitWidth() > widestWidthSeen) {
-      widestWidthSeen = DstTy->getBitWidth();
-      widestType = DstTy;
-    }
-  }
-
-  assert(widestWidthSeen > 0);
-
-  // Now extend each pair to the widest seen.
-  for (Subscript *Pair : Pairs) {
-    const SCEV *Src = Pair->Src;
-    const SCEV *Dst = Pair->Dst;
-    IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
-    IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
-    if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy &&
-             "This function only unify integer types and "
-             "expect Src and Dst share the same type otherwise.");
-      continue;
-    }
-    if (SrcTy->getBitWidth() < widestWidthSeen)
-      // Sign-extend Src to widestType
-      Pair->Src = SE->getSignExtendExpr(Src, widestType);
-    if (DstTy->getBitWidth() < widestWidthSeen) {
-      // Sign-extend Dst to widestType
-      Pair->Dst = SE->getSignExtendExpr(Dst, widestType);
-    }
-  }
-}
-
 // removeMatchingExtensions - Examines a subscript pair.
 // If the source and destination are identically sign (or zero)
 // extended, it strips off the extension in an effect to simplify
@@ -3283,7 +3231,10 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   for (int I = 0; I < Size; ++I) {
     Pair[I].Src = SrcSubscripts[I];
     Pair[I].Dst = DstSubscripts[I];
-    unifySubscriptType(&Pair[I]);
+
+    // TODO: Is this check necessary?
+    if (Pair[I].Src->getType() != Pair[I].Dst->getType())
+      return false;
 
     if (EnableMonotonicityCheck) {
       if (MonChecker.checkMonotonicity(Pair[I].Src, OutermostLoop).isUnknown())
