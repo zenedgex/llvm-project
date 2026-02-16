@@ -10,8 +10,7 @@
         <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
         {{/Template}}
         {{! Function Prototype }}
-        <pre><code class="language-cpp code-clang-doc">{{ReturnType.QualName}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})</code></pre>
-        {{! Function Comments }}
+        <pre><code class="nohighlight code-clang-doc"><span class="hljs-type">{{ReturnType.QualName}}</span> <span class="hljs-title">{{Name}}</span> ({{#IsLong}}<span class="params-vertical">{{#Params}}<span class="param"><span class="hljs-type">{{Type.QualName}}</span> {{Name}},</span>{{/Params}}</span>{{/IsLong}}{{^IsLong}}{{#Params}}<span class="hljs-type">{{Type.QualName}}</span> {{Name}}{{^End}}, {{/End}}{{/Params}}{{/IsLong}})</code></pre>
         {{#Description}}
         <div class="doc-card">
             {{>Comments}}

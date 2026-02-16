@@ -456,6 +456,24 @@ static void serializeArray(const Container &Records, Object &Obj,
       ItemObj["End"] = true;
     RecordsArrayRef.push_back(ItemVal);
   }
+  if (Key == "Params") {
+    size_t TotalLength = 0;
+    for (const auto &Val : RecordsArrayRef) {
+      if (const auto *ItemObj = Val.getAsObject()) {
+        if (auto Type = ItemObj->getString("Type")) 
+          TotalLength += Type->size();
+        if (auto Name = ItemObj->getString("Name"))
+          TotalLength += Name->size();
+        TotalLength += 2; // For ', '
+      }
+    }
+    if (TotalLength > 15) {
+      Obj["IsLong"] = true;
+    }
+    else {
+      Obj["IsLong"] = false;
+    }
+  }
   Obj[Key] = RecordsArray;
 }
 
