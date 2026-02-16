@@ -370,6 +370,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto Op : {ISD::BR_CC, ISD::SELECT_CC})
       setOperationAction(Op, T, Expand);
 
+  // Reference types need SELECT_CC to be expanded to SELECT as well.
+  if (Subtarget->hasReferenceTypes()) {
+    for (auto T : {MVT::externref, MVT::funcref})
+      setOperationAction(ISD::SELECT_CC, T, Expand);
+  }
+
   // We have custom switch handling.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
 
