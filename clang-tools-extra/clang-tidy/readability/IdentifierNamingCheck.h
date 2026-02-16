@@ -72,7 +72,7 @@ public:
 
     NamingStyle(std::optional<CaseType> Case, StringRef Prefix,
                 StringRef Suffix, StringRef IgnoredRegexpStr,
-                HungarianPrefixType HPType);
+                HungarianPrefixType HPType, bool TrimPrefixSuffix);
     NamingStyle(const NamingStyle &O) = delete;
     NamingStyle &operator=(NamingStyle &&O) = default;
     NamingStyle(NamingStyle &&O) = default;
@@ -86,6 +86,8 @@ public:
     std::string IgnoredRegexpStr;
 
     HungarianPrefixType HPType;
+
+    bool TrimPrefixSuffix;
   };
 
   struct HungarianNotation {
@@ -173,11 +175,12 @@ public:
                 const IdentifierNamingCheck::HungarianNotationOption &HNOption,
                 IdentifierNamingCheck::CaseType Case) const;
 
-  std::string
-  fixupWithStyle(StringRef Type, StringRef Name,
-                 const IdentifierNamingCheck::NamingStyle &Style,
-                 const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-                 const Decl *D) const;
+  std::string fixupWithStyle(
+      StringRef Type, StringRef Name,
+      const IdentifierNamingCheck::NamingStyle &Style,
+      ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
+      const IdentifierNamingCheck::HungarianNotationOption &HNOption,
+      const Decl *D) const;
 
   StyleKind findStyleKind(
       const NamedDecl *D,
