@@ -2484,8 +2484,11 @@ public:
   /// `counted_by_or_null` attribute.
   ///
   /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
-                                 bool OrNull);
+  bool CheckCountedByAttrOnField(FieldDecl *FD, QualType T, Expr *E,
+                                 bool CountInBytes, bool OrNull);
+
+  bool CheckCountedByAttrOnFieldDecl(FieldDecl *FD, Expr *E, bool CountInBytes,
+                                     bool OrNull);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.
@@ -4377,6 +4380,9 @@ public:
   void ActOnFields(Scope *S, SourceLocation RecLoc, Decl *TagDecl,
                    ArrayRef<Decl *> Fields, SourceLocation LBrac,
                    SourceLocation RBrac, const ParsedAttributesView &AttrList);
+
+  /// Transform field types that contain late-parsed type attributes.
+  void ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl);
 
   /// ActOnTagStartDefinition - Invoked when we have entered the
   /// scope of a tag's definition (e.g., for an enumeration, class,
