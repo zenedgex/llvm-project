@@ -619,7 +619,7 @@ protected:
 
   /// LastBitfieldStorageUnitSize - If IsMsStruct, represents the size of the
   /// storage unit of the previous field if it was a bitfield.
-  unsigned char LastBitfieldStorageUnitSize;
+  uint64_t LastBitfieldStorageUnitSize;
 
   /// MaxFieldAlignment - The maximum allowed field alignment. This is set by
   /// #pragma pack.
