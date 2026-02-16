@@ -2128,3 +2128,33 @@ func.func @matmul_invalid_mixed_types(%t: tensor<?xf16>, %f: vector<4xf16>)
                                 outs(%f : vector<4xf16>) -> tensor<?xf16>
   func.return %0, %f : tensor<?xf16>, vector<4xf16>
 }
+
+// -----
+
+func.func @batch_matmul_invalid_type()
+{
+  %0 = amx.tile_zero : !amx.tile<16x16xbf16>
+  // expected-error @below {{custom op 'linalg.batch_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %1 = linalg.batch_matmul ins(%0, %0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  return
+}
+
+// -----
+
+func.func @batch_reduce_matmul_invalid_type()
+{
+  %0 = amx.tile_zero : !amx.tile<16x16xbf16>
+  // expected-error @below {{custom op 'linalg.batch_reduce_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %1 = linalg.batch_reduce_matmul ins(%0, %0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  return
+}
+
+// -----
+
+func.func @matmul_invalid_type()
+{
+  %0 = amx.tile_zero : !amx.tile<16x16xbf16>
+  // expected-error @below {{custom op 'linalg.matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %1 = linalg.matmul ins(%0, %0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  return
+}

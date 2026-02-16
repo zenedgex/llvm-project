@@ -3873,9 +3873,11 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   }
 
   Value value1 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
-                                    block.getArgument(0));
+                                    block.getArgument(0), emitError);
   Value value2 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
-                                    block.getArgument(1));
+                                    block.getArgument(1), emitError);
+  if (!value1 || !value2)
+    return;
   Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2, emitError);
   if (!value3)
     return;
@@ -4646,11 +4648,20 @@ void BatchMatmulOp::regionBuilder(
   }
 
   auto toType = block.getArgument(2).getType();
-  Value castValA = helper.buildTypeFn(castVal, toType, block.getArgument(0));
-  Value castValB = helper.buildTypeFn(castVal, toType, block.getArgument(1));
-  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
-  Value addVal =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  Value castValA =
+      helper.buildTypeFn(castVal, toType, block.getArgument(0), emitError);
+  Value castValB =
+      helper.buildTypeFn(castVal, toType, block.getArgument(1), emitError);
+  if (!castValA || !castValB)
+    return;
+  Value mulVal =
+      helper.buildBinaryFn(BinaryFn::mul, castValA, castValB, emitError);
+  if (!mulVal)
+    return;
+  Value addVal = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
+                                      mulVal, emitError);
+  if (!addVal)
+    return;
   yields.push_back(addVal);
   helper.yieldOutputs(yields);
 }
@@ -6582,13 +6593,20 @@ void BatchReduceMatmulOp::regionBuilder(
   SmallVector<Value> yields;
 
   auto toType = block.getArgument(2).getType();
-  Value castValA =
-      helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(0));
-  Value castValB =
-      helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(1));
-  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
+  Value castValA = helper.buildTypeFn(TypeFn::cast_signed, toType,
+                                      block.getArgument(0), emitError);
+  Value castValB = helper.buildTypeFn(TypeFn::cast_signed, toType,
+                                      block.getArgument(1), emitError);
+  if (!castValA || !castValB)
+    return;
+  Value mulVal =
+      helper.buildBinaryFn(BinaryFn::mul, castValA, castValB, emitError);
+  if (!mulVal)
+    return;
   Value addVal =
       helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  if (!addVal)
+    return;
   yields.push_back(addVal);
   helper.yieldOutputs(yields);
 }
