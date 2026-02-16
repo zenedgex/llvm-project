@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMInterfacesIncGen
   MLIROpenMPOpsIncGen
   intrinsics_gen
+  MLIRLLVMTranslationDialectInterfaceIncGen
 
   LINK_COMPONENTS
   BinaryFormat
