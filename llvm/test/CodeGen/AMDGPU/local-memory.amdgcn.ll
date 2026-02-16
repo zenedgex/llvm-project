@@ -54,8 +54,8 @@ define amdgpu_kernel void @local_memory_two_objects(ptr addrspace(1) %out) #0 {
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_barrier
-; SI-NEXT:    v_sub_i32_e32 v2, vcc, 28, v1
 ; SI-NEXT:    ds_read_b32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v2, vcc, 28, v1
 ; SI-NEXT:    ds_read_b32 v3, v2
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, 0
