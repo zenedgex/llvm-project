@@ -221,6 +221,10 @@ enum RegBankLLTMappingApplyID {
   Sgpr32_WF,
   SgprV4S32_WF,
 
+  // Src only modifiers: execute in waterfall loop for calls
+  SgprP0Call_WF,
+  SgprP4Call_WF,
+
   // Src only modifiers: extends
   Sgpr32AExt,
   Sgpr32AExtBoolInReg,
